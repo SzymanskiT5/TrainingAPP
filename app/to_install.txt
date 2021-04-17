@@ -1,0 +1,2 @@
+how to run flask
+how to make db
