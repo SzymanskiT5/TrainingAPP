@@ -1,4 +1,5 @@
 from flask import flash
+from werkzeug.security import generate_password_hash, check_password_hash
 
 from .constans import EMAIL_PATTERN, PASSWORD_PATTERN
 from .models import Users
@@ -42,41 +43,39 @@ class Handler:
     def get_email_from_nick(nick):
         found_email = db.session.query(Users).filter(Users.name == nick).first()
         db.session.commit()
-        if found_email:
-            return found_email.email
+        return found_email.email
 
     @staticmethod
     def get_nick_from_email(email):
         found_nick = db.session.query(Users).filter(Users.email == email).first()
         db.session.commit()
-        if found_nick:
-            return found_nick.name
+        return found_nick.name
 
 
     @staticmethod
     def get_password_from_email(email):
         found_password = db.session.query(Users).filter(Users.email == email).first()
         db.session.commit()
-        if found_password:
-            return found_password.password
+        return found_password.password_hash
 
     def check_login(self, nick_or_email, password):
         email = self.check_if_email_exits(nick_or_email)
         nick = self.check_if_nick_exists(nick_or_email)
 
         if email:
+            email = nick_or_email
             nick = self.get_nick_from_email(email)
             get_password = self.get_password_from_email(email)
-
-            if password == self.user.check_passwordd(get_password):
-                return "Successfully loged in, 'success ", nick, email
+            if check_password_hash(get_password, password):
+                return "Successfully logged in", "success", nick, email
 
         elif nick:
-            email = self.get_email_from_nick(nick)
+            nick = nick_or_email
+            email = self.get_email_from_nick(nick_or_email)
             get_password = self.get_password_from_email(email)
 
-            if password == self.user.check_password(get_password):
-                return "Successfully loged in, 'success ", nick, email
+            if check_password_hash(get_password, password):
+                return "Successfully logged in", "success", nick, email
 
         return "Wrong nickname/email or password", "error", None, None
 
@@ -99,7 +98,7 @@ class Handler:
 
         password_format = self.check_password_format(password)
         if password_format:
-            secured_password = self.user.set_password(password)
+            secured_password = generate_password_hash(password)
             new_user = Users(name=nick, email=email, password_hash=secured_password)
             db.session.add(new_user)
             db.session.commit()

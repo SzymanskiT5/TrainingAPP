@@ -6,6 +6,7 @@ main_blueprint = Blueprint('main', __name__)
 login_blueprint = Blueprint('login', __name__)
 my_schedule_blueprint = Blueprint('myschedule', __name__)
 sign_up_blueprint = Blueprint("signup", __name__)
+logout_blueprint = Blueprint("logout",__name__)
 execute = Handler()
 
 
@@ -18,11 +19,12 @@ def main():
 def login():
     if request.method == "POST":
         session.permanent = True
-        email_or_nick = request.form['nickname']
-        password = request.form['password']
         if "nick" in session:
             flash('You are already logged in', 'success')
             return redirect(url_for("main.main"))
+
+        email_or_nick = request.form['nickname']
+        password = request.form['password']
 
         flashpop, message, nickname, email = execute.check_login(email_or_nick, password)
 
@@ -33,7 +35,7 @@ def login():
 
         if message == 'error':
             flash(flashpop, message)
-            return render_template(login)
+            return render_template("login.html")
 
 
     elif request.method == "GET":
@@ -67,3 +69,14 @@ def signup():
 
     elif request.method == "GET":
         return render_template("signup.html")
+
+@sign_up_blueprint.route('/logout', methods=["POST", "GET"])
+def logout():
+    if "nick" in session:
+        session.pop("nick")
+        session.pop("email")
+        flash("You have been logged out!", "success")
+        return redirect(url_for("main.main"))
+
+    flash("You are not logged in!", "warning")
+    return redirect(url_for("login.login"))
