@@ -1,13 +1,39 @@
-from flask import render_template, redirect, url_for, Blueprint, request, session, flash
+from flask import render_template, redirect, url_for, Blueprint, request, session, flash, Response
 from . import db
-from .handler import Handler
+from .uservalidator import UserValidator
+from typing import Union
 
 main_blueprint = Blueprint('main', __name__)
 login_blueprint = Blueprint('login', __name__)
 my_schedule_blueprint = Blueprint('myschedule', __name__)
 sign_up_blueprint = Blueprint("signup", __name__)
 logout_blueprint = Blueprint("logout",__name__)
-execute = Handler()
+
+
+def check_if_logged_in(template_name: str):
+    if "nick" in session:
+        flash('You are already logged in', 'success')
+        return redirect(url_for("main.main"))
+
+    return render_template(template_name)
+
+
+
+def check_if_logged_myschedule() -> Union[Response, str]:
+    if "nick" in session:
+        return render_template("myschedule.html")
+    flash("You need to log in to check the schedule", 'warning')
+    return redirect(url_for("login.login"))
+
+
+def handle_login(email_or_nick: str, password: str) -> Union[Response, str]:
+    flashpop, message, nickname, email = UserValidator.check_login(email_or_nick, password)
+
+    flash(flashpop, message)
+    if message == 'success':
+        session.update({"nick": nickname, "email": email})
+        return redirect(url_for("main.main"))
+    return render_template("login.html")
 
 
 @main_blueprint.route('/', methods=["GET"])
@@ -19,56 +45,41 @@ def main():
 def login():
     if request.method == "POST":
         session.permanent = True
-        if "nick" in session:
-            flash('You are already logged in', 'success')
-            return redirect(url_for("main.main"))
-
         email_or_nick = request.form['nickname']
         password = request.form['password']
 
-        flashpop, message, nickname, email = execute.check_login(email_or_nick, password)
-
-        if message == 'success':
-            session.update({"nick": nickname, "email": email})
-            flash(flashpop, message)
-            return redirect(url_for("main.main"))
-
-        if message == 'error':
-            flash(flashpop, message)
-            return render_template("login.html")
-
+        return handle_login(email_or_nick, password)
 
     elif request.method == "GET":
-        return render_template("login.html")
+        return check_if_logged_in("login.html")
 
 
 @my_schedule_blueprint.route('/myschedule', methods=["POST", "GET"])
 def my_schedule():
-    return "TEST"
+    if request.method == "POST":
+        pass
+
+
+    elif request.method == "GET" :
+        return check_if_logged_myschedule()
 
 
 @sign_up_blueprint.route('/signup', methods=["POST", "GET"])
 def signup():
-    if "nick" in session:
-        flash("You are already logged in", "success")
-        return redirect(url_for("my_schedule.my_schedule"))
-
-    elif request.method == "POST":
+    if request.method == "POST":
         email = request.form['email']
         nickname = request.form['nickname']
         password = request.form['password']
-        flashpop, message = (execute.check_signup_email(email, nickname, password))
+        flashpop, message = (UserValidator.check_signup_email(email, nickname, password))
+
+        flash(flashpop, message)
         if message == 'warning':
-            flash(flashpop, message)
             return redirect(url_for("signup.signup"))
-        else:
-            flash(flashpop, message)
-            return redirect(url_for("main.main"))
 
-
-
+        return redirect(url_for("main.main"))
     elif request.method == "GET":
-        return render_template("signup.html")
+        return check_if_logged_in("signup.html")
+
 
 @sign_up_blueprint.route('/logout', methods=["POST", "GET"])
 def logout():
