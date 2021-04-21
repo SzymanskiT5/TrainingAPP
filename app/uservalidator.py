@@ -1,14 +1,23 @@
-from flask import flash
+from flask import flash, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from .constans import EMAIL_PATTERN, PASSWORD_PATTERN
 from .models import Users
 from . import db
 import re
-
+import sys
+from .mailhandler import MailHandler
 
 class UserValidator:
     '''Controlling class'''
+
+
+    @staticmethod
+    def get_id_by_nick(nick):
+        found_id = db.session.query(Users).filter(Users.name == nick).first()
+        db.session.commit()
+
+        return found_id._id
 
     @staticmethod
     def check_email_format(email):
@@ -91,6 +100,7 @@ class UserValidator:
     @staticmethod
     def check_signup_email(email, nick, password):
         email_format = UserValidator.check_email_format(email)
+
         if not email_format:
             return "False email format", 'warning'
 
@@ -110,5 +120,7 @@ class UserValidator:
         if password_format:
             secured_password = generate_password_hash(password)
             UserValidator.create_user(nick, email, secured_password)
-            return "Now you can log in!", 'success'
+
+
+            return "Now you can log in!", 'success'   ##ADD CONFIRM
         return "False password format", "warning"

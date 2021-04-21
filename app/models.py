@@ -28,18 +28,18 @@ class Training(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users._id"))
 
 
-    # def __init__(self, name: str, date: datetime, duration: int, note: str, rate: int, user_id:int) -> None:
-    #     self.name = name
-    #     self.date = date
-    #     self.duration = duration
-    #     self.note = note
-    #     self.rate = rate
-    #     self.user_id = user_id
-    #
-    # def update(self, modified_training: Training) -> None:
-    #     self.name = modified_training.name
-    #     self.date = modified_training.date
-    #     self.duration = modified_training.duration
-    #     self.note = modified_training.note
-    #     self.rate = modified_training.rate
+    def __init__(self, name: str, date: datetime, duration: int, note: str, rate: int, user_id:int) -> None:
+        self.name = name
+        self.date = date
+        self.duration = duration
+        self.note = note
+        self.rate = rate
+        self.user_id = user_id
+
+    def update(self, modified_training: Training) -> None:
+        self.name = modified_training.name
+        self.date = modified_training.date
+        self.duration = modified_training.duration
+        self.note = modified_training.note
+        self.rate = modified_training.rate
 

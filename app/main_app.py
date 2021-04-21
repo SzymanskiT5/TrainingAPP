@@ -1,27 +1,39 @@
-from flask import render_template, redirect, url_for, Blueprint, request, session, flash, Response
+from flask import render_template, redirect, url_for, Blueprint, request, session, flash, Response, current_app
 from . import db
 from .uservalidator import UserValidator
 from typing import Union
 from .models import Training
-
+from datetime import date
 
 main_blueprint = Blueprint('main', __name__)
 login_blueprint = Blueprint('login', __name__)
 my_schedule_blueprint = Blueprint('myschedule', __name__)
 sign_up_blueprint = Blueprint("signup", __name__)
-logout_blueprint = Blueprint("logout",__name__)
+logout_blueprint = Blueprint("logout", __name__)
 
 events = [
     {
-        "name":" test",
+        "name": " test",
         "date": "2021-04-20",
-
-
+        "duration": "60",
+        "note" : "FAJNIE",
+        "rate" : 5,
 
     }
 
-
 ]
+
+
+def add_training(name, training_date, duration, note, rate, user_id) -> None:
+    training = Training(name=name, date=training_date, duration=duration, note=note, rate=rate, user_id=int(user_id))
+    db.session.add(training)
+    db.session.commit()
+
+def create_date_object(training_date):
+    """SQL needs python data format"""
+    date_time_object = date.fromisoformat(training_date)
+    return date_time_object
+
 
 def check_if_logged_in(template_name: str):
     if "nick" in session:
@@ -33,7 +45,7 @@ def check_if_logged_in(template_name: str):
 
 def check_if_logged_myschedule() -> Union[Response, str]:
     if "nick" in session:
-        return render_template("myschedule.html", events =events)
+        return render_template("myschedule.html", events=events)
     flash("You need to log in to check the schedule", 'warning')
     return redirect(url_for("login.login"))
 
@@ -70,19 +82,19 @@ def login():
 def my_schedule():
     if request.method == "POST":
         name = request.form['name']
-        date = request.form['date']
+        training_date = request.form['date']
+        training_date = create_date_object(training_date)
         duration = request.form['duration']
         note = request.form['note']
         rate = request.form['rate']
-        training = Training(name=name, date=date, duration=duration, note=note, rate=rate, user=session["nick"])
-        db.session.add(training)
-        db.session.commit()
+        nick = session["nick"]
+        user_id = UserValidator.get_id_by_nick(nick)
+        current_app.logger.info(training_date)
+        add_training(name, training_date, duration, note, rate, user_id)
         flash("Training added!", "success")
-        return render_template("myschedule.html", events = events)
+        return render_template("myschedule.html", events=events)
 
-
-
-    elif request.method == "GET" :
+    elif request.method == "GET":
         return check_if_logged_myschedule()
 
 
