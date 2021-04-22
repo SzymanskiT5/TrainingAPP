@@ -10,14 +10,15 @@ login_blueprint = Blueprint('login', __name__)
 my_schedule_blueprint = Blueprint('myschedule', __name__)
 sign_up_blueprint = Blueprint("signup", __name__)
 logout_blueprint = Blueprint("logout", __name__)
+registration_blueprint = Blueprint("registration", __name__)
 
 events = [
     {
         "name": " test",
         "date": "2021-04-20",
         "duration": "60",
-        "note" : "FAJNIE",
-        "rate" : 5,
+        "note": "FAJNIE",
+        "rate": 5,
 
     }
 
@@ -28,6 +29,7 @@ def add_training(name, training_date, duration, note, rate, user_id) -> None:
     training = Training(name=name, date=training_date, duration=duration, note=note, rate=rate, user_id=int(user_id))
     db.session.add(training)
     db.session.commit()
+
 
 def create_date_object(training_date):
     """SQL needs python data format"""
@@ -89,7 +91,7 @@ def my_schedule():
         rate = request.form['rate']
         nick = session["nick"]
         user_id = UserValidator.get_id_by_nick(nick)
-        current_app.logger.info(training_date)
+        # current_app.logger.info(training_date)
         add_training(name, training_date, duration, note, rate, user_id)
         flash("Training added!", "success")
         return render_template("myschedule.html", events=events)
@@ -111,6 +113,7 @@ def signup():
             return redirect(url_for("signup.signup"))
 
         return redirect(url_for("main.main"))
+
     elif request.method == "GET":
         return check_if_logged_in("signup.html")
 
@@ -125,3 +128,28 @@ def logout():
 
     flash("You are not logged in!", "warning")
     return redirect(url_for("login.login"))
+
+
+@registration_blueprint.route("/registration", methods=["POST", "GET"])
+def register():
+    if request.method == "POST":
+        email = request.form["email"]
+        activation_code = request.form["activation_code"]
+        flashpop, message = UserValidator.check_registration(email, activation_code)
+        if message == "success":
+            flash(flashpop, message)
+            return redirect(url_for("login.login"))
+
+        elif message == "warning":
+            flash(flashpop, message)
+            return render_template("registration.html")
+        flash(flashpop, message)
+
+        return redirect(url_for("signup.signup"))
+
+
+
+
+
+    elif request.method == "GET":
+        return check_if_logged_in('registration.html')

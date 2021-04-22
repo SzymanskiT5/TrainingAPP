@@ -15,10 +15,11 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///User_and_Workouts.db'
     db.init_app(app)
     app.debug = True
-    from .main_app import main_blueprint, login_blueprint, my_schedule_blueprint, sign_up_blueprint
+    from .main_app import main_blueprint, login_blueprint, my_schedule_blueprint, sign_up_blueprint, registration_blueprint
     app.register_blueprint(main_blueprint)
     app.register_blueprint(login_blueprint)
     app.register_blueprint(my_schedule_blueprint)
     app.register_blueprint(sign_up_blueprint)
+    app.register_blueprint(registration_blueprint)
     return app
 

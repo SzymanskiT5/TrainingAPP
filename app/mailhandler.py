@@ -3,11 +3,14 @@ import random
 import smtplib
 from email.message import EmailMessage
 import string
-from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy.sql.functions import now
+from app import db
+from app.models import Users
+from datetime import datetime, timedelta
 
 
 class MailHandler:
-    """Using enviroment variabels to make our dates safe"""
+    """Using environment variables to make our dates safe"""
 
     def __init__(self):
         self.email = os.getenv("EMAIL_USER")
@@ -15,26 +18,25 @@ class MailHandler:
 
 
 
-    def create_code_and_add_to_db(self):
-        password = ''.join(random.choice(string.printable) for i in range(8))
-
-        return password
-
-
-
-
-
-    def create_email(self, email):
+    def create_email(self, email, activation_code):
         msg = EmailMessage()
         msg['Subject'] = "Finish your registration"
-        msg["From"] = email
+        msg["From"] = self.email
         msg["To"] = email
-        msg.set_content = ("TEST")
+        msg.set_content = ("Registration")
+        msg.add_alternative(f"""\
+        <!DOCTYPE html>
+        <html>
+            <body>
+                <h1> Finish your registration!</h1>
+                <p> "Hi! Your code is {activation_code}    After 30 minutes code will be deleted with account. Cheers!" </p>
+            </body>
+        </html>
+        """, subtype='html')
 
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
             smtp.login(self.email, self.password)
             smtp.send_message(msg)
 
 
-mail = MailHandler()
-print(mail.create_code_and_add_to_db())
+
