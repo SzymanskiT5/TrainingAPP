@@ -142,8 +142,6 @@ class UserValidator:
     def set_expire_date():
         now = datetime.now()
         expire_date = now + timedelta(minutes=5)
-        # expire_date = expire_date.strftime("%d-%m-%Y %H-%M-%S")
-        # expire_date = datetime.fromisoformat(expire_date)
         return expire_date
 
     @staticmethod
