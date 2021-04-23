@@ -1,3 +1,5 @@
+import sys
+
 from flask import render_template, redirect, url_for, Blueprint, request, session, flash, Response, current_app
 from . import db
 from .uservalidator import UserValidator
@@ -37,7 +39,7 @@ def create_date_object(training_date):
     return date_time_object
 
 
-def check_if_logged_in(template_name: str):
+def check_if_logged_in(template_name: str) -> Union[Response, str]:
     if "nick" in session:
         flash('You are already logged in', 'success')
         return redirect(url_for("main.main"))
@@ -68,7 +70,7 @@ def main():
 
 
 @login_blueprint.route('/login', methods=["POST", "GET"])
-def login():
+def login() -> Union[Response, str]:
     if request.method == "POST":
         session.permanent = True
         email_or_nick = request.form['nickname']
@@ -81,7 +83,7 @@ def login():
 
 
 @my_schedule_blueprint.route('/myschedule', methods=["POST", "GET"])
-def my_schedule():
+def my_schedule() -> Union[Response, str]:
     if request.method == "POST":
         name = request.form['name']
         training_date = request.form['date']
@@ -91,7 +93,6 @@ def my_schedule():
         rate = request.form['rate']
         nick = session["nick"]
         user_id = UserValidator.get_id_by_nick(nick)
-        # current_app.logger.info(training_date)
         add_training(name, training_date, duration, note, rate, user_id)
         flash("Training added!", "success")
         return render_template("myschedule.html", events=events)
@@ -101,7 +102,7 @@ def my_schedule():
 
 
 @sign_up_blueprint.route('/signup', methods=["POST", "GET"])
-def signup():
+def signup() -> Union[Response, str]:
     if request.method == "POST":
         email = request.form['email']
         nickname = request.form['nickname']
@@ -112,14 +113,14 @@ def signup():
         if message == 'warning':
             return redirect(url_for("signup.signup"))
 
-        return redirect(url_for("main.main"))
+        return redirect(url_for("registration.registration"))
 
     elif request.method == "GET":
         return check_if_logged_in("signup.html")
 
 
 @sign_up_blueprint.route('/logout', methods=["POST", "GET"])
-def logout():
+def logout() -> Union[Response, str]:
     if "nick" in session:
         session.pop("nick")
         session.pop("email")
@@ -131,7 +132,7 @@ def logout():
 
 
 @registration_blueprint.route("/registration", methods=["POST", "GET"])
-def register():
+def registration() -> Union[Response, str]:
     if request.method == "POST":
         email = request.form["email"]
         activation_code = request.form["activation_code"]
@@ -146,8 +147,6 @@ def register():
         flash(flashpop, message)
 
         return redirect(url_for("signup.signup"))
-
-
 
 
 

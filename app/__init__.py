@@ -7,7 +7,7 @@ from hashlib import md5
 db = SQLAlchemy()
 
 
-def create_app():
+def create_app() -> Flask:
     app = Flask(__name__)
     encryptor = md5()
     app.permanent_session_lifetime = timedelta(minutes=30)

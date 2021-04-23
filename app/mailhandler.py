@@ -1,12 +1,7 @@
 import os
-import random
 import smtplib
 from email.message import EmailMessage
-import string
-from sqlalchemy.sql.functions import now
-from app import db
-from app.models import Users
-from datetime import datetime, timedelta
+
 
 
 class MailHandler:
@@ -16,9 +11,7 @@ class MailHandler:
         self.email = os.getenv("EMAIL_USER")
         self.password = os.getenv("EMAIL_PASS")
 
-
-
-    def create_email(self, email, activation_code):
+    def create_email(self, email: str, activation_code: str) -> None:
         msg = EmailMessage()
         msg['Subject'] = "Finish your registration"
         msg["From"] = self.email
@@ -37,6 +30,3 @@ class MailHandler:
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
             smtp.login(self.email, self.password)
             smtp.send_message(msg)
-
-
-

@@ -1,7 +1,7 @@
 from __future__ import annotations
-from datetime import datetime
-from . import db
-from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime, date
+from app import db
+
 
 class Users(db.Model):
     _id = db.Column(db.Integer, primary_key=True)
@@ -13,13 +13,14 @@ class Users(db.Model):
     expire_date = db.Column(db.DateTime)
     workouts = db.relationship("Training", backref="user")
 
-
-
-    def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
-
-    def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
+    def __init__(self, name: str, email: str, password_hash: str, activation_code: str, is_activated: int,
+                 expire_date=datetime):
+        self.name = name
+        self.email = email
+        self.password_hash = password_hash
+        self.activation_code = activation_code
+        self.is_activated = is_activated
+        self.expire_date = expire_date
 
 
 class Training(db.Model):
@@ -31,10 +32,7 @@ class Training(db.Model):
     rate = db.Column(db.Integer, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey("users._id"))
 
-
-
-
-    def __init__(self, name: str, date: datetime, duration: int, note: str, rate: int, user_id:int) -> None:
+    def __init__(self, name: str, date: datetime, duration: int, note: str, rate: int, user_id: int) -> None:
         self.name = name
         self.date = date
         self.duration = duration
@@ -48,4 +46,3 @@ class Training(db.Model):
         self.duration = modified_training.duration
         self.note = modified_training.note
         self.rate = modified_training.rate
-
