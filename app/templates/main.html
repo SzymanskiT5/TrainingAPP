@@ -45,6 +45,12 @@
                     <a class="nav-link" href="/registration">Registration</a>
                 </li>
                 {% endif %}
+                {% if session['nick'] %}
+                <li class="nav-item">
+                    <a class="nav-link" href="/myaccount">My Account</a>
+                </li>
+                {% else %}
+                {% endif %}
 
             </ul>
         </div>

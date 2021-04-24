@@ -22,7 +22,8 @@ class MailHandler:
         <html>
             <body>
                 <h1> Finish your registration!</h1>
-                <p> "Hi! Your code is {activation_code}    After 30 minutes code will be deleted with account. Cheers!" </p>
+                <p> "Hi! Your code is bellow. After 30 minutes code will be deleted with account. Cheers!" </p>
+                <h2>{activation_code}</h2>
             </body>
         </html>
         """, subtype='html')

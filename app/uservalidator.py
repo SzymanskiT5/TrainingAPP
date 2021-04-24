@@ -2,9 +2,11 @@ import random
 import string
 import sys
 from datetime import datetime, timedelta, date
+
+from flask import session
 from werkzeug.security import generate_password_hash, check_password_hash
 from app.constans import EMAIL_PATTERN, PASSWORD_PATTERN
-from app.exceptions import CodeExpired, WrongCodeOrEmail
+from app.exceptions import *
 from app.models import Users
 from app import db
 import re
@@ -22,29 +24,40 @@ class UserValidator:
         return found_id._id
 
     @staticmethod
-    def check_email_format(email: str) -> bool:
-        return bool(re.match(EMAIL_PATTERN, email))
+    def check_email_format(email: str):
+        if not (re.match(EMAIL_PATTERN, email)):
+            raise WrongEmailFormat
 
     @staticmethod
-    def check_password_format(password: str) -> bool:
-        return bool(re.match(PASSWORD_PATTERN, password))
+    def check_password_format(password: str):
+        if not (re.match(PASSWORD_PATTERN, password)):
+            raise FalsePasswordFormat
 
     @staticmethod
-    def check_nick_lenght(nick: str) -> bool:
-        return len(nick) < 81
+    def check_nick_lenght(nick: str):
+        if not len(nick) < 81:
+            raise TooLongNick
 
     @staticmethod
-    def check_if_email_exits(email: str) -> bool:
+    def check_if_email_exits(email: str):
         found_email = db.session.query(Users.email).filter(Users.email == email).first()
-        print(found_email, file=sys.stderr)
         db.session.commit()
-        return bool(found_email)
+        if found_email:
+            raise EmailExists
 
     @staticmethod
-    def check_if_nick_exists(nick: str) -> bool:
+    def check_if_email_doesnt_exists(email: str):
+        found_email = db.session.query(Users.email).filter(Users.email == email).first()
+        db.session.commit()
+        if not found_email:
+            raise EmailRegistrationDoesntExists
+
+    @staticmethod
+    def check_if_nick_exists(nick: str):
         found_nick = Users.query.filter_by(name=nick).first()
         db.session.commit()
-        return bool(found_nick)
+        if found_nick:
+            raise NickExists
 
     @staticmethod
     def get_email_from_nick(nick: str) -> str:
@@ -83,7 +96,6 @@ class UserValidator:
     def check_hashed_password(entered_password: str, password: str, nick: str, email: str) -> Tuple:
         if check_password_hash(entered_password, password):
             return "Successfully logged in", "success", nick, email
-        print(check_password_hash(entered_password, password), file=sys.stdout)
         return "Wrong nickname/email or password", "error", None, None
 
     @staticmethod
@@ -99,30 +111,6 @@ class UserValidator:
         return activation.is_activated
 
     @staticmethod
-    def check_login(nick_or_email: str, password: str) -> Tuple:
-        email = UserValidator.check_if_email_exits(nick_or_email)
-        nick = UserValidator.check_if_nick_exists(nick_or_email)
-
-        if email:
-            email = nick_or_email
-            nick = UserValidator.get_nick_from_email(email)
-            entered_password = UserValidator.get_password_from_email(email)
-
-            is_activated_email = UserValidator.check_if_user_activated_from_email(email)
-            if is_activated_email:
-                return UserValidator.check_hashed_password(entered_password, password, nick, email)
-
-        elif nick:
-            nick = nick_or_email
-            email = UserValidator.get_email_from_nick(nick_or_email)
-            entered_password = UserValidator.get_password_from_email(email)
-            is_activated_email = UserValidator.check_if_user_activated_from_email(email)
-            if is_activated_email:
-                return UserValidator.check_hashed_password(entered_password, password, nick, email)
-
-        return "Wrong nickname/email/password or not activated", "error", None, None
-
-    @staticmethod
     def create_user(nick: str, email: str, secured_password: str, activation_code: str, expire_date: datetime) -> None:
         new_user = Users(name=nick, email=email, password_hash=secured_password, activation_code=activation_code,
                          is_activated=0, expire_date=expire_date)
@@ -132,7 +120,7 @@ class UserValidator:
     @staticmethod
     def set_expire_date() -> datetime:
         now = datetime.now()
-        expire_date = now + timedelta(minutes=5)
+        expire_date = now + timedelta(minutes=30)
         return expire_date
 
     @staticmethod
@@ -164,48 +152,132 @@ class UserValidator:
         db.session.commit()
 
     @staticmethod
+    def check_if_activated(email):
+        is_activated_email = UserValidator.check_if_user_activated_from_email(email)
+        if not is_activated_email:
+            raise AccountNotActivated
+
+    @staticmethod
+    def check_entered_password_with_base(email, entered_password):
+        password = UserValidator.get_password_from_email(email)
+        if entered_password == check_password_hash(password, entered_password):
+            print()
+            return True
+
+
+    @staticmethod
+    def check_login(nick_or_email: str, password: str) -> Tuple:
+        try:
+            UserValidator.check_if_email_exits(nick_or_email)
+            UserValidator.check_if_nick_exists(nick_or_email)
+            return "Wrong nickname/email/password", "warning", "nick", "email"
+
+
+        except EmailExists:
+            email = nick_or_email
+            nick = UserValidator.get_nick_from_email(email)
+            UserValidator.check_if_activated(nick_or_email)
+            if UserValidator.check_entered_password_with_base(email, password):
+                return "You are successfully logged in", "success", nick, email
+            return "Wrong nickname/email/password", "warning", "nick", "email"
+
+
+
+        except NickExists:
+            nick = nick_or_email
+            email = UserValidator.get_email_from_nick(nick)
+            if UserValidator.check_entered_password_with_base(email, password):
+                return "You are successfully logged in", "success", nick, email
+            return "Wrong nickname/email/password", "warning", "nick", "email"
+
+        except AccountNotActivated:
+            return "Account not activated", "warning", "nick", "email"
+
+    @staticmethod
     def check_registration(email: str, activation_code: str) -> Tuple:
         try:
-            # UserValidator.check_if_email_exits(email)
+            UserValidator.check_if_email_doesnt_exists(email)
             UserValidator.compare_expire_date_with_current_date(email)
             UserValidator.compare_activation_code_with_code_from_base(email, activation_code)
             UserValidator.delete_activation_code(email)
             UserValidator.set_is_activated_true(email)
             return "Now you can log in!", "success"
+
+        except EmailRegistrationDoesntExists:
+            return "Wrong activation code or email", "warning"
+
         except CodeExpired:
             UserValidator.delete_user(email)
-            return "Code expired, you need to add new account", "error"
+            return "Code expired, you need to add new account, your account has been deleted", "error"
+
         except WrongCodeOrEmail:
             return "Wrong activation code or email", "warning"
 
     @staticmethod
+    def compare_entered_passport_with_password_from_base(email: str, entered_password: str):
+        password_from_base = UserValidator.get_password_from_email(email)
+        if entered_password != password_from_base:
+            raise EnteredPasswordIncorrect
+
+    @staticmethod
+    def compare_new_password_with_new_password_confirm(new_password: str, new_password_confirm: str):
+        if new_password != new_password_confirm:
+            raise NewPasswordsAreNotTheSame
+
+    @staticmethod
+    def change_password_in_base(email, new_password):
+        password = db.session.query(Users).filter(Users.email == email).first()
+        password.password_hash = new_password
+        db.session.commit()
+
+    @staticmethod
+    def handle_change_password(entered_password, new_password, new_password_confirm):
+        email = session['email']
+        try:
+            UserValidator.compare_entered_passport_with_password_from_base(email, entered_password)
+            UserValidator.compare_new_password_with_new_password_confirm(new_password, new_password_confirm)
+            UserValidator.check_password_format(new_password)
+            UserValidator.check_password_format(new_password_confirm)
+            UserValidator.change_password_in_base(email, new_password)
+            return "Password changed!, you can log in", "success"
+
+
+        except EnteredPasswordIncorrect:
+            return "Wrong password", "warning"
+
+        except NewPasswordsAreNotTheSame:
+            return "New password are not the same", "warning"
+
+        except FalsePasswordFormat:
+            return "New password format not correct, use strong password format", "warning"
+
+    @staticmethod
     def check_signup_email(email: str, nick: str, password: str) -> Tuple:
-        email_format = UserValidator.check_email_format(email)
-
-        if not email_format:
-            return "False email format", 'warning'
-
-        email_exists = UserValidator.check_if_email_exits(email)
-        if email_exists:
-            return "Email is already used", 'warning'
-
-        nick_length = UserValidator.check_nick_lenght(nick)
-        if not nick_length:
-            return "Nick is too long! Max 80 characters", 'warning'
-
-        nick_exists = UserValidator.check_if_nick_exists(nick)
-        if nick_exists:
-            return "Nick is already used", 'warning'
-
-        password_format = UserValidator.check_password_format(password)
-        if password_format:
+        try:
+            UserValidator.check_email_format(email)
+            UserValidator.check_if_email_exits(email)
+            UserValidator.check_nick_lenght(nick)
+            UserValidator.check_if_nick_exists(nick)
+            UserValidator.check_password_format(password)
             secured_password = generate_password_hash(password)
             activation_code = UserValidator.create_activation_code()
             expire_date = UserValidator.set_expire_date()
             UserValidator.create_user(nick, email, secured_password, activation_code, expire_date)
             mail = MailHandler()
             mail.create_email(email, activation_code)
-
             return "Check your mailbox to finish registration", 'success'
-        return "False password format", "warning"
 
+        except WrongEmailFormat:
+            return "False email format", 'warning'
+
+        except EmailExists:
+            return "Email is already used", 'warning'
+
+        except TooLongNick:
+            return "Nick is too long! Max 80 characters", 'warning'
+
+        except NickExists:
+            return "Nick is already used", 'warning'
+
+        except FalsePasswordFormat:
+            return "False password format", "warning"

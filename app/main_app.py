@@ -13,6 +13,9 @@ my_schedule_blueprint = Blueprint('myschedule', __name__)
 sign_up_blueprint = Blueprint("signup", __name__)
 logout_blueprint = Blueprint("logout", __name__)
 registration_blueprint = Blueprint("registration", __name__)
+my_account_blueprint = Blueprint("myaccount", __name__)
+change_password_blueprint=Blueprint("change_password", __name__)
+delete_account_blueprint=Blueprint("delete_account", __name__)
 
 events = [
     {
@@ -45,6 +48,13 @@ def check_if_logged_in(template_name: str) -> Union[Response, str]:
         return redirect(url_for("main.main"))
 
     return render_template(template_name)
+
+def check_if_logged_in_account_options(template:str):
+    if "nick" in session:
+        return render_template(template)
+    flash("You need to log in to check account options", 'warning')
+    return redirect(url_for("login.login"))
+
 
 
 def check_if_logged_myschedule() -> Union[Response, str]:
@@ -137,14 +147,13 @@ def registration() -> Union[Response, str]:
         email = request.form["email"]
         activation_code = request.form["activation_code"]
         flashpop, message = UserValidator.check_registration(email, activation_code)
+        flash(flashpop, message)
         if message == "success":
-            flash(flashpop, message)
             return redirect(url_for("login.login"))
 
         elif message == "warning":
-            flash(flashpop, message)
             return render_template("registration.html")
-        flash(flashpop, message)
+
 
         return redirect(url_for("signup.signup"))
 
@@ -152,3 +161,41 @@ def registration() -> Union[Response, str]:
 
     elif request.method == "GET":
         return check_if_logged_in('registration.html')
+
+@my_account_blueprint.route("/myaccount", methods=["GET"])
+def myaccount():
+    if request.method == "GET":
+        return check_if_logged_in_account_options("accountoptions.html")
+
+@my_account_blueprint.route("/myaccount/changepassword", methods=["POST", "GET"])
+def change_password():
+    if request.method =="POST":
+        current_password = request.form["current_password"]
+        new_password = request.form["current_password"]
+        new_password_confirm = request.form["new_password_confirm"]
+        flashpop, message = UserValidator.handle_change_password(current_password, new_password, new_password_confirm)
+        flash(flashpop, message)
+        if message == "success":
+           return redirect(url_for("logout.logout"))
+
+
+        return render_template("passwordchange.html")
+
+
+
+
+    elif request.method == "GET":
+        return check_if_logged_in_account_options("passwordchange.html")
+
+@my_account_blueprint.route("/myaccount/deletaccount", methods=["POST", "GET"])
+
+def delete_account():
+    if request.method =="POST":
+        pass
+
+
+    elif request.method == "GET":
+        return "TEST"
+
+
+
