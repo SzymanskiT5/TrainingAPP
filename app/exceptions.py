@@ -31,3 +31,6 @@ class NewPasswordsAreNotTheSame(Exception):
 
 class AccountNotActivated(Exception):
     pass
+
+class AccountIsActivated(Exception):
+    pass

@@ -125,7 +125,7 @@ class UserValidator:
 
     @staticmethod
     def delete_user(email: str) -> None:
-        Users.query.filter_by(email=email).delete()
+        Users.query.filter(Users.email==email).delete()
         db.session.commit()
 
     @staticmethod
@@ -154,15 +154,14 @@ class UserValidator:
     @staticmethod
     def check_if_activated(email):
         is_activated_email = UserValidator.check_if_user_activated_from_email(email)
-        if not is_activated_email:
-            raise AccountNotActivated
+        db.session.commit()
+        return is_activated_email
+
 
     @staticmethod
     def check_entered_password_with_base(email, entered_password):
         password = UserValidator.get_password_from_email(email)
-        if entered_password == check_password_hash(password, entered_password):
-            print()
-            return True
+        return bool(check_password_hash(password, entered_password))
 
 
     @staticmethod
@@ -179,7 +178,7 @@ class UserValidator:
             UserValidator.check_if_activated(nick_or_email)
             if UserValidator.check_entered_password_with_base(email, password):
                 return "You are successfully logged in", "success", nick, email
-            return "Wrong nickname/email/password", "warning", "nick", "email"
+            return "Wrong nickname/email/password or not activated", "warning", "nick", "email"
 
 
 
@@ -188,35 +187,39 @@ class UserValidator:
             email = UserValidator.get_email_from_nick(nick)
             if UserValidator.check_entered_password_with_base(email, password):
                 return "You are successfully logged in", "success", nick, email
-            return "Wrong nickname/email/password", "warning", "nick", "email"
+            return "Wrong nickname/email/password or not activated", "warning", "nick", "email"
 
-        except AccountNotActivated:
-            return "Account not activated", "warning", "nick", "email"
+
 
     @staticmethod
     def check_registration(email: str, activation_code: str) -> Tuple:
-        try:
-            UserValidator.check_if_email_doesnt_exists(email)
-            UserValidator.compare_expire_date_with_current_date(email)
-            UserValidator.compare_activation_code_with_code_from_base(email, activation_code)
-            UserValidator.delete_activation_code(email)
-            UserValidator.set_is_activated_true(email)
+        if UserValidator.check_if_user_activated_from_email(email):
+            try:
+                UserValidator.check_if_email_doesnt_exists(email)
+                UserValidator.compare_expire_date_with_current_date(email)
+                UserValidator.compare_activation_code_with_code_from_base(email, activation_code)
+                UserValidator.delete_activation_code(email)
+                UserValidator.set_is_activated_true(email)
+
+
+            except EmailRegistrationDoesntExists:
+                return "Wrong activation code or email", "warning"
+
+            except CodeExpired:
+                UserValidator.delete_user(email)
+                return "Code expired, you need to add new account, your account has been deleted", "error"
+
+            except WrongCodeOrEmail:
+                return "Wrong activation code or email", "warning"
             return "Now you can log in!", "success"
 
-        except EmailRegistrationDoesntExists:
-            return "Wrong activation code or email", "warning"
+        return "You are already activated!", "success"
 
-        except CodeExpired:
-            UserValidator.delete_user(email)
-            return "Code expired, you need to add new account, your account has been deleted", "error"
 
-        except WrongCodeOrEmail:
-            return "Wrong activation code or email", "warning"
 
     @staticmethod
     def compare_entered_passport_with_password_from_base(email: str, entered_password: str):
-        password_from_base = UserValidator.get_password_from_email(email)
-        if entered_password != password_from_base:
+        if not UserValidator.check_entered_password_with_base(email, entered_password):
             raise EnteredPasswordIncorrect
 
     @staticmethod
@@ -227,7 +230,7 @@ class UserValidator:
     @staticmethod
     def change_password_in_base(email, new_password):
         password = db.session.query(Users).filter(Users.email == email).first()
-        password.password_hash = new_password
+        password.password_hash = generate_password_hash(new_password)
         db.session.commit()
 
     @staticmethod
@@ -250,6 +253,8 @@ class UserValidator:
 
         except FalsePasswordFormat:
             return "New password format not correct, use strong password format", "warning"
+
+
 
     @staticmethod
     def check_signup_email(email: str, nick: str, password: str) -> Tuple:
@@ -281,3 +286,14 @@ class UserValidator:
 
         except FalsePasswordFormat:
             return "False password format", "warning"
+
+    @staticmethod
+    def handle_account_delete(password) -> Tuple:
+        email = session['email']
+        try:
+            UserValidator.compare_entered_passport_with_password_from_base(email, password)
+            UserValidator.delete_user(email)
+            return "Your account deleted successfully", "success"
+
+        except EnteredPasswordIncorrect:
+            return "Wrong password", "warning"
