@@ -74,24 +74,19 @@
 {% block content %}
 
     <form action="#" method="POST">
-        <h1>LOG IN</h1>
+        <h1>CHANGE PASSWORD</h1>
         <div class="formcontainer">
             <hr/>
             <div class="container">
-                <label for="uname"><strong>Username or e-mail</strong></label>
-                <input type="text" placeholder="Enter Username" name="nickname" required>
-                <label for="psw"><strong>Password</strong></label>
-                <input type="password" placeholder="Enter Password" name="password" required>
+                <label for="uname"><strong>New Password</strong></label>
+                <input type="password" placeholder="New Password" name="new_password" required>
+                <label for="uname"><strong>Confirm New Password</strong></label>
+                <input type="password" placeholder="Enter New Password" name="new_password_confirm" required>
             </div>
-            {{ recaptcha }}
-            <button type="submit" value="submit">Log in</button>
-            <div class="container" style="background-color: #eee">
-                <label style="padding-left: 15px">
-                    <input type="checkbox" checked="checked" name="remember"> Remember me
-                </label>
-                <span class="psw"><a href="/passwordrecovery"> Forgot password?</a></span>
+            <button type="submit" value="submit">Activate</button>
+
             </div>
-        </div>
+
     </form>
 
 {% endblock %}

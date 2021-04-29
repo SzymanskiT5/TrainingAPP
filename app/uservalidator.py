@@ -2,13 +2,13 @@ import random
 import string
 import sys
 from datetime import datetime, timedelta, date
-
+from flask_recaptcha import ReCaptcha
 from flask import session
 from werkzeug.security import generate_password_hash, check_password_hash
 from app.constans import EMAIL_PATTERN, PASSWORD_PATTERN
 from app.exceptions import *
 from app.models import Users
-from app import db
+from app import db, recaptcha
 import re
 from app.mailhandler import MailHandler
 from typing import Tuple
@@ -99,10 +99,11 @@ class UserValidator:
         return "Wrong nickname/email or password", "error", None, None
 
     @staticmethod
-    def check_if_user_activated_from_email(email: str) -> int:
+    def check_if_user_activated_from_email(email: str):
         found_activated = db.session.query(Users).filter(Users.email == email).first()
         db.session.commit()
-        return bool(found_activated.is_activated)
+        if found_activated.is_activated:
+            raise AccountIsActivated
 
     @staticmethod
     def check_if_user_activated_from_nick(nick: str) -> int:
@@ -125,7 +126,7 @@ class UserValidator:
 
     @staticmethod
     def delete_user(email: str) -> None:
-        Users.query.filter(Users.email==email).delete()
+        Users.query.filter(Users.email == email).delete()
         db.session.commit()
 
     @staticmethod
@@ -153,69 +154,80 @@ class UserValidator:
 
     @staticmethod
     def check_if_activated(email):
-        is_activated_email = UserValidator.check_if_user_activated_from_email(email)
+        is_activated = db.session.query(Users).filter(Users.email == email).first()
         db.session.commit()
-        return is_activated_email
-
+        return is_activated
 
     @staticmethod
     def check_entered_password_with_base(email, entered_password):
         password = UserValidator.get_password_from_email(email)
         return bool(check_password_hash(password, entered_password))
 
-
     @staticmethod
     def check_login(nick_or_email: str, password: str) -> Tuple:
-        try:
-            UserValidator.check_if_email_exits(nick_or_email)
-            UserValidator.check_if_nick_exists(nick_or_email)
-            return "Wrong nickname/email/password", "warning", "nick", "email"
+        if recaptcha.verify():
+            try:
+                UserValidator.check_if_email_exits(nick_or_email)
+                UserValidator.check_if_nick_exists(nick_or_email)
+                return "Wrong nickname/email/password", "warning", None, None
 
 
-        except EmailExists:
-            email = nick_or_email
-            nick = UserValidator.get_nick_from_email(email)
-            UserValidator.check_if_activated(nick_or_email)
-            if UserValidator.check_entered_password_with_base(email, password):
-                return "You are successfully logged in", "success", nick, email
-            return "Wrong nickname/email/password or not activated", "warning", "nick", "email"
+            except EmailExists:
+                email = nick_or_email
+                nick = UserValidator.get_nick_from_email(email)
+                UserValidator.check_if_activated(email)
+                if UserValidator.check_entered_password_with_base(email, password):
+                    return "You are successfully logged in", "success", nick, email
+                return "Wrong nickname/email/password or not activated", "warning", None, None
 
 
 
-        except NickExists:
-            nick = nick_or_email
-            email = UserValidator.get_email_from_nick(nick)
-            if UserValidator.check_entered_password_with_base(email, password):
-                return "You are successfully logged in", "success", nick, email
-            return "Wrong nickname/email/password or not activated", "warning", "nick", "email"
+            except NickExists:
+                nick = nick_or_email
+                email = UserValidator.get_email_from_nick(nick)
+                UserValidator.check_if_activated(email)
+                if UserValidator.check_entered_password_with_base(email, password):
+                    return "You are successfully logged in", "success", nick, email
+                return "Wrong nickname/email/password or not activated", "warning", None, None
 
-
+        return "You need to prove captcha", "warning", None, None
 
     @staticmethod
     def check_registration(email: str, activation_code: str) -> Tuple:
-        if UserValidator.check_if_user_activated_from_email(email):
-            try:
-                UserValidator.check_if_email_doesnt_exists(email)
-                UserValidator.compare_expire_date_with_current_date(email)
-                UserValidator.compare_activation_code_with_code_from_base(email, activation_code)
-                UserValidator.delete_activation_code(email)
-                UserValidator.set_is_activated_true(email)
+        try:
+            UserValidator.check_recaptcha()
+            UserValidator.check_if_email_doesnt_exists(email)
+            UserValidator.check_if_user_activated_from_email(email)
+            UserValidator.compare_expire_date_with_current_date(email)
+            UserValidator.compare_activation_code_with_code_from_base(email, activation_code)
+            UserValidator.delete_activation_code(email)
+            UserValidator.set_is_activated_true(email)
 
-
-            except EmailRegistrationDoesntExists:
-                return "Wrong activation code or email", "warning"
-
-            except CodeExpired:
-                UserValidator.delete_user(email)
-                return "Code expired, you need to add new account, your account has been deleted", "error"
-
-            except WrongCodeOrEmail:
-                return "Wrong activation code or email", "warning"
             return "Now you can log in!", "success"
 
-        return "You are already activated!", "success"
+        except EmailRegistrationDoesntExists:
+            return "Wrong activation code or email", "warning"
 
+        except CodeExpired:
+            UserValidator.delete_user(email)
+            return "Code expired, you need to add new account, your account has been deleted", "error"
 
+        except WrongCodeOrEmail:
+            return "Wrong activation code or email", "warning"
+
+        except AccountIsActivated:
+            return "You are already activated!", "success"
+
+        except RecaptchaIsMissing:
+            return "You need to prove captcha", "warning"
+
+    @staticmethod
+    def handle_password_recovery(email):
+        try:
+            UserValidator.check_if_email_exits(email)
+            return "There is no such email", "warning"
+        except EmailExists:
+            return "Check your mailbox and follow the instructions", "success"
 
     @staticmethod
     def compare_entered_passport_with_password_from_base(email: str, entered_password: str):
@@ -223,9 +235,9 @@ class UserValidator:
             raise EnteredPasswordIncorrect
 
     @staticmethod
-    def compare_new_password_with_new_password_confirm(new_password: str, new_password_confirm: str):
-        if new_password != new_password_confirm:
-            raise NewPasswordsAreNotTheSame
+    def compare_password_with_password_confirm(password: str, password_confirm: str):
+        if password != password_confirm:
+            raise PasswordsAreNotTheSame
 
     @staticmethod
     def change_password_in_base(email, new_password):
@@ -238,7 +250,7 @@ class UserValidator:
         email = session['email']
         try:
             UserValidator.compare_entered_passport_with_password_from_base(email, entered_password)
-            UserValidator.compare_new_password_with_new_password_confirm(new_password, new_password_confirm)
+            UserValidator.compare_password_with_password_confirm(new_password, new_password_confirm)
             UserValidator.check_password_format(new_password)
             UserValidator.check_password_format(new_password_confirm)
             UserValidator.change_password_in_base(email, new_password)
@@ -248,29 +260,49 @@ class UserValidator:
         except EnteredPasswordIncorrect:
             return "Wrong password", "warning"
 
-        except NewPasswordsAreNotTheSame:
+        except PasswordsAreNotTheSame:
             return "New password are not the same", "warning"
 
         except FalsePasswordFormat:
             return "New password format not correct, use strong password format", "warning"
 
-
+    @staticmethod
+    def handle_password_recovery_after_token(password, confirm_password):
+        try:
+            UserValidator.check_password_format(password)
+            UserValidator.check_password_format(confirm_password)
+            UserValidator.compare_password_with_password_confirm(password, confirm_password)
+            password = generate_password_hash(password)
+            return "Password is changed!", "success", password
+        except FalsePasswordFormat:
+            return "Wrong Password Format", "warning", None
+        except PasswordsAreNotTheSame:
+            return "Passwords are not the same", "warning", None
 
     @staticmethod
-    def check_signup_email(email: str, nick: str, password: str) -> Tuple:
+    def check_recaptcha():
+        if not recaptcha.verify():
+            raise RecaptchaIsMissing
+
+    @staticmethod
+    def check_signup_email(email: str, nick: str, password: str, confirm_password: str) -> Tuple:
         try:
+            UserValidator.check_recaptcha()
             UserValidator.check_email_format(email)
             UserValidator.check_if_email_exits(email)
             UserValidator.check_nick_lenght(nick)
             UserValidator.check_if_nick_exists(nick)
             UserValidator.check_password_format(password)
+            UserValidator.check_password_format(confirm_password)
+            UserValidator.compare_password_with_password_confirm(password, confirm_password)
             secured_password = generate_password_hash(password)
             activation_code = UserValidator.create_activation_code()
             expire_date = UserValidator.set_expire_date()
             UserValidator.create_user(nick, email, secured_password, activation_code, expire_date)
             mail = MailHandler()
-            mail.create_email(email, activation_code)
-            return "Check your mailbox to finish registration", 'success'
+            mail.create_activation_email(email, activation_code)
+            return "Now you can activate your account", "success"
+
 
         except WrongEmailFormat:
             return "False email format", 'warning'
@@ -287,13 +319,23 @@ class UserValidator:
         except FalsePasswordFormat:
             return "False password format", "warning"
 
+        except PasswordsAreNotTheSame:
+            return "Passwords are not the same", "warning"
+
+        except RecaptchaIsMissing:
+            return "You need to prove captcha", "warning"
+
     @staticmethod
-    def handle_account_delete(password) -> Tuple:
+    def handle_account_delete(password: str, password_confirm: str) -> Tuple:
         email = session['email']
         try:
             UserValidator.compare_entered_passport_with_password_from_base(email, password)
+            UserValidator.compare_password_with_password_confirm(password, password_confirm)
             UserValidator.delete_user(email)
             return "Your account deleted successfully", "success"
 
         except EnteredPasswordIncorrect:
             return "Wrong password", "warning"
+
+        except PasswordsAreNotTheSame:
+            return "Passwords are not the same", "warning"

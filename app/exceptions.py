@@ -26,7 +26,7 @@ class EmailRegistrationDoesntExists(Exception):
 class EnteredPasswordIncorrect(Exception):
     pass
 
-class NewPasswordsAreNotTheSame(Exception):
+class PasswordsAreNotTheSame(Exception):
     pass
 
 class AccountNotActivated(Exception):
@@ -34,3 +34,7 @@ class AccountNotActivated(Exception):
 
 class AccountIsActivated(Exception):
     pass
+
+class RecaptchaIsMissing(Exception):
+    pass
+
