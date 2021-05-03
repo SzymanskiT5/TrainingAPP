@@ -1,11 +1,13 @@
+import json
 import sys
 
-from flask import render_template, redirect, url_for, Blueprint, request, session, flash, Response, current_app
+import flask
+from flask import render_template, redirect, url_for, Blueprint, request, session, flash, Response, current_app, jsonify
 from . import db, recaptcha
 from .mailhandler import MailHandler
 from .uservalidator import UserValidator
 from typing import Union
-from .models import Training, Users
+from .models import Training, Users, TrainingSchema
 from datetime import date
 
 main_blueprint = Blueprint('main', __name__)
@@ -19,6 +21,7 @@ change_password_blueprint = Blueprint("change_password", __name__)
 delete_account_blueprint = Blueprint("delete_account", __name__)
 password_recovery_blueprint = Blueprint("password_recovery", __name__)
 reset_token_blueprint = Blueprint("reset_token", __name__)
+my_schedule_add = Blueprint("my_schedule_add", __name__)
 events = [
     {
         "name": " test",
@@ -32,10 +35,10 @@ events = [
 ]
 
 
-def add_training(name, training_date, duration, note, rate, user_id) -> None:
-    training = Training(name=name, date=training_date, duration=duration, note=note, rate=rate, user_id=int(user_id))
-    db.session.add(training)
-    db.session.commit()
+# def add_training(name, training_date, duration, note, rate, user_id) -> None:
+#     training = Training(name=name, date=training_date, duration=duration, note=note, rate=rate)
+#     db.session.add(training)
+#     db.session.commit()
 
 
 def create_date_object(training_date):
@@ -93,24 +96,37 @@ def login() -> Union[Response, str]:
     elif request.method == "GET":
         return check_if_logged_in("login.html")
 
+def get_user_trainings():
+    email = session["email"]
+    user_id = UserValidator.get_id_by_email(email)
+    trainings_found = Training.query.filter_by(user_id=user_id)
+    trainings_found = trainings_found.all()
+    return trainings_found
 
-@my_schedule_blueprint.route('/myschedule', methods=["POST", "GET"])
+@my_schedule_blueprint.route('/myschedule', methods=["GET"])
 def my_schedule() -> Union[Response, str]:
-    if request.method == "POST":
-        name = request.form['name']
-        training_date = request.form['date']
-        training_date = create_date_object(training_date)
-        duration = request.form['duration']
-        note = request.form['note']
-        rate = request.form['rate']
-        nick = session["nick"]
-        user_id = UserValidator.get_id_by_nick(nick)
-        add_training(name, training_date, duration, note, rate, user_id)
-        flash("Training added!", "success")
-        return render_template("eventcalendar_create-read-update-delete-CRUD.html")
 
-    elif request.method == "GET":
-        return check_if_logged_myschedule()
+    trainings = get_user_trainings()
+    json_trainings = jsonify(myData=TrainingSchema().dump(trainings, many=True))
+    print(json_trainings, file=sys.stderr)
+    # return json_trainings
+    return render_template("eventcalendar_create-read-update-delete-CRUD.html", event=json_trainings)
+    # return check_if_logged_myschedule()
+
+@my_schedule_add.route('/myschedule/add' ,methods = ["POST"])
+def my_schedule_add_to_db():
+    if "nick" in session:
+        req = request.json
+        training = Training.create_from_json(req)
+        db.session.add(training)
+        db.session.commit()
+        flash("Added!", "success")
+        return redirect(url_for("myschedule.my_schedule"))
+
+    flash("You are not logged in", "warning")
+    return redirect(url_for("login.login"))
+
+
 
 
 @sign_up_blueprint.route('/signup', methods=["POST", "GET"])
@@ -245,6 +261,7 @@ def reset_token(token):
 
     elif request.method == "GET":
         return check_if_logged_in("resettoken.html")
+
 
 def handle_token_status(user:Users):
     if not user:

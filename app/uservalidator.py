@@ -24,6 +24,13 @@ class UserValidator:
         return found_id._id
 
     @staticmethod
+    def get_id_by_email(email):
+        found_id = db.session.query(Users).filter(Users.email == email).first()
+        db.session.commit()
+        return found_id._id
+
+
+    @staticmethod
     def check_email_format(email: str):
         if not (re.match(EMAIL_PATTERN, email)):
             raise WrongEmailFormat
