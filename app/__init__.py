@@ -12,8 +12,8 @@ from flask_recaptcha import ReCaptcha
 db = SQLAlchemy()
 ma = Marshmallow()
 app = Flask(__name__)
-app.config['RECAPTCHA_SITE_KEY'] = "6LdbCr4aAAAAAN3YMTm9xGImsGbKsGbM_6TI85aH"# <-- Add your site key
-app.config['RECAPTCHA_SECRET_KEY'] = "6LdbCr4aAAAAAHn6yDVQa8N9vPGBYuItXm6kOk0H" # <-- Add your secret key
+app.config['RECAPTCHA_SITE_KEY'] = ""# <-- Add your site key
+app.config['RECAPTCHA_SECRET_KEY'] = "" # <-- Add your secret key
 recaptcha = ReCaptcha(app)
 
 encryptor = md5()
