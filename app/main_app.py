@@ -1,5 +1,6 @@
 import json
 import sys
+from sqlalchemy import and_
 
 import flask
 from flask import render_template, redirect, url_for, Blueprint, request, session, flash, Response, current_app, jsonify
@@ -8,7 +9,7 @@ from .mailhandler import MailHandler
 from .uservalidator import UserValidator
 from typing import Union
 from .models import Training, Users, TrainingSchema
-from datetime import date
+from datetime import date, datetime
 
 main_blueprint = Blueprint('main', __name__)
 login_blueprint = Blueprint('login', __name__)
@@ -21,30 +22,17 @@ change_password_blueprint = Blueprint("change_password", __name__)
 delete_account_blueprint = Blueprint("delete_account", __name__)
 password_recovery_blueprint = Blueprint("password_recovery", __name__)
 reset_token_blueprint = Blueprint("reset_token", __name__)
-my_schedule_add = Blueprint("my_schedule_add", __name__)
-events = [
-    {
-        "name": " test",
-        "date": "2021-04-20",
-        "duration": "60",
-        "note": "FAJNIE",
-        "rate": 5,
-
-    }
-
-]
+my_schedule_add_blueprint = Blueprint("my_schedule_add", __name__)
+my_schedule_delete_blueprint = Blueprint("my_schedule_delete", __name__)
+my_schedule_update_blueprint = Blueprint("my_schedule_update",__name__)
+my_schedule_get_trainings_blueprint = Blueprint("my_schedule_get_trainings", __name__)
 
 
-# def add_training(name, training_date, duration, note, rate, user_id) -> None:
-#     training = Training(name=name, date=training_date, duration=duration, note=note, rate=rate)
-#     db.session.add(training)
-#     db.session.commit()
 
-
-def create_date_object(training_date):
+def create_date_object(training_date) -> date:
     """SQL needs python data format"""
-    date_time_object = date.fromisoformat(training_date)
-    return date_time_object
+    date_object = date.fromisoformat(training_date)
+    return date_object
 
 
 def check_if_logged_in(template_name: str) -> Union[Response, str]:
@@ -55,7 +43,7 @@ def check_if_logged_in(template_name: str) -> Union[Response, str]:
     return render_template(template_name)
 
 
-def check_if_logged_in_account_options(template: str):
+def check_if_logged_in_account_options(template: str) -> Union[Response, str]:
     if "nick" in session:
         return render_template(template)
     flash("You need to log in to check account options", 'warning')
@@ -96,7 +84,7 @@ def login() -> Union[Response, str]:
     elif request.method == "GET":
         return check_if_logged_in("login.html")
 
-def get_user_trainings():
+def get_user_trainings_from_base() -> bool:
     email = session["email"]
     user_id = UserValidator.get_id_by_email(email)
     trainings_found = Training.query.filter_by(user_id=user_id)
@@ -105,28 +93,92 @@ def get_user_trainings():
 
 @my_schedule_blueprint.route('/myschedule', methods=["GET"])
 def my_schedule() -> Union[Response, str]:
+    get_trainings()
+    return render_template("eventcalendar_create-read-update-delete-CRUD.html")
 
-    trainings = get_user_trainings()
-    json_trainings = jsonify(myData=TrainingSchema().dump(trainings, many=True))
-    print(json_trainings, file=sys.stderr)
-    # return json_trainings
-    return render_template("eventcalendar_create-read-update-delete-CRUD.html", event=json_trainings)
-    # return check_if_logged_myschedule()
+@my_schedule_get_trainings_blueprint.route("/myschedule/get_trainings", methods = ["GET"])
+def get_trainings():
+    if "nick" in session:
+        trainings = get_user_trainings_from_base()
+        json_trainings = jsonify(TrainingSchema().dump(trainings, many=True))
+        return json_trainings
 
-@my_schedule_add.route('/myschedule/add' ,methods = ["POST"])
+
+def add_training(training: Training) -> None:
+    db.session.add(training)
+    db.session.commit()
+
+
+@my_schedule_add_blueprint.route('/myschedule/add' ,methods = ["POST"])
 def my_schedule_add_to_db():
     if "nick" in session:
         req = request.json
         training = Training.create_from_json(req)
-        db.session.add(training)
-        db.session.commit()
+        add_training(training)
         flash("Added!", "success")
         return redirect(url_for("myschedule.my_schedule"))
 
-    flash("You are not logged in", "warning")
-    return redirect(url_for("login.login"))
+
+    return redirect(url_for("main.main"))
 
 
+
+def get_training_id(user_id, start) -> int:
+    training = db.session.query(Training).filter(Training.user_id == user_id)\
+                                            .filter(Training.start == start).first()
+    training_id = training.id
+    db.session.commit()
+    return  training_id
+
+
+def delete_training(training_id) -> None:
+    Training.query.filter(Training.id == training_id).delete()
+    db.session.commit()
+
+@my_schedule_delete_blueprint.route("/myschedule/delete", methods=["DELETE"])
+def my_schedule_delete_from_db():
+    if "nick" in session:
+        user_id = UserValidator.get_id_by_email(session["email"])
+        req = request.json
+        start = req["start"]
+        start = Training.reformate_date(start)
+        print(start, file=sys.stderr)
+        training_id = get_training_id(user_id, start)
+
+        delete_training(training_id)
+        flash("Training deleted", "success")
+        return redirect(url_for("myschedule.my_schedule"))
+
+    return redirect(url_for("main.main"))
+
+def update_training(json_body:dict, training_id )-> None:
+
+    training_new = Training.create_from_json(json_body)
+    training = db.session.query(Training).filter(Training.id == training_id).first()
+    training.update(training_new)
+    db.session.commit()
+
+
+
+
+
+
+@my_schedule_update_blueprint.route("/myschedule/update", methods=["PUT"])
+def my_schedule_update_training():
+    if "nick" in session:
+        user_id = UserValidator.get_id_by_email(session["email"])
+        print(user_id, file=sys.stderr)
+        req = request.json
+        start = req["start"]
+        start = Training.reformate_date(start)
+        print(start, file=sys.stderr)
+
+        training_id = get_training_id(user_id, start)
+        update_training(req, training_id)
+
+        return redirect(url_for("myschedule.my_schedule"))
+
+    return redirect(url_for("main.main"))
 
 
 @sign_up_blueprint.route('/signup', methods=["POST", "GET"])

@@ -1,3 +1,5 @@
 /venv/
 /templates/.idea/
 /__pycache__/
+/.idea/
+/User_and_Workouts.db

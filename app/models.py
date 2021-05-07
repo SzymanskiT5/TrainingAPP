@@ -2,15 +2,12 @@ from __future__ import annotations
 
 import sys
 from datetime import datetime, date
-
 from flask import session
-
 from app import db, login_manager, app, ma, fields
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
-# from flask_marshmallow import Marshmallow, fields, ma
 from flask_login import UserMixin
 
-# from app.uservalidator import UserValidator
+
 
 
 @login_manager.user_loader
@@ -58,29 +55,28 @@ class Users(db.Model, UserMixin):
 
 class Training(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(length=50), nullable=False)
-    date = db.Column(db.DateTime, nullable=False)
+    title = db.Column(db.String(length=50), nullable=False)
+    start = db.Column(db.DateTime, nullable=False)
     duration = db.Column(db.Integer, nullable=False)
-    note = db.Column(db.String(length=5000), nullable=True)
+    description = db.Column(db.String(length=5000), nullable=True)
     rate = db.Column(db.Integer, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey("users._id"))
 
-    def __init__(self, name: str, date: date, duration: int, note: str, rate: int, user_id: int) -> None:
-        self.name = name
-        self.date = date
+    def __init__(self, title: str, start: date, duration: int, description: str, rate: int, user_id: int) -> None:
+        self.title = title
+        self.start = start
         self.duration = duration
-        self.note = note
+        self.description = description
         self.rate = rate
         self.user_id = user_id
 
     def __str__(self):
-        return f"{self.name},{self.date}, {self.duration}, {self.note}, {self.rate}, {self.user_id}"
+        return f"{self.title},{self.start}, {self.duration}, {self.description}, {self.rate}, {self.user_id}"
 
     def update(self, modified_training: Training) -> None:
-        self.name = modified_training.name
-        self.date = modified_training.date
+        self.title = modified_training.title
         self.duration = modified_training.duration
-        self.note = modified_training.note
+        self.description = modified_training.description
         self.rate = modified_training.rate
 
     @staticmethod
@@ -89,20 +85,33 @@ class Training(db.Model):
         user_id= db.session.query(Users).filter(Users.email == email).first()
         db.session.commit()
         user_id = user_id._id
-        date = json_body["date"]
-        date = datetime.fromisoformat(date[:-1])
-        return Training(name= json_body["name"], date=date, duration=json_body["duration"],
-                        note=json_body["note"], rate=json_body["rate"], user_id = user_id)
+        start = json_body["start"]
+        start = Training.reformate_date(start)
+        return Training(title=json_body["title"], start=date.fromisoformat(start), duration=json_body["duration"],
+                        description=json_body["description"], rate=json_body["rate"], user_id = user_id)
+
+    @staticmethod
+    def reformate_date(start):
+        start = start.split(".")
+        start.reverse()
+        print(start[2], file=sys.stderr)
+        if len(start[2]) != 2:
+            day = ["0", start[2]]
+            start[2] = "".join(day)
+        start = "-".join(start)
+
+        print(start, file=sys.stderr)
+        return start
+
 
 
 
 class TrainingSchema(ma.Schema):
     id = fields.fields.Integer()
-    name = fields.fields.Str()
-    date = fields.fields.DateTime(format='%Y-%m-%d')
+    title = fields.fields.Str()
+    start = fields.fields.DateTime(format='%Y-%m-%d')
     duration = fields.fields.Integer()
-    note = fields.fields.Str()
+    description = fields.fields.Str()
     rate = fields.fields.Integer()
-    user_id = fields.fields.Integer()
 
 

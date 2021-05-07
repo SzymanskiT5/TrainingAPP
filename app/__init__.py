@@ -27,7 +27,10 @@ app.config['SESSION_TYPE'] = 'sqlalchemy'
 db.init_app(app)
 app.debug = True
 from .main_app import main_blueprint, login_blueprint, my_schedule_blueprint, sign_up_blueprint, \
-    activation_blueprint, my_account_blueprint, password_recovery_blueprint, reset_token_blueprint, my_schedule_add
+    activation_blueprint, my_account_blueprint, password_recovery_blueprint, reset_token_blueprint, \
+    my_schedule_add_blueprint, my_schedule_delete_blueprint,my_schedule_update_blueprint,\
+    my_schedule_get_trainings_blueprint
+
 
 app.register_blueprint(main_blueprint)
 app.register_blueprint(login_blueprint)
@@ -37,7 +40,10 @@ app.register_blueprint(activation_blueprint)
 app.register_blueprint(my_account_blueprint)
 app.register_blueprint(password_recovery_blueprint)
 app.register_blueprint(reset_token_blueprint)
-app.register_blueprint(my_schedule_add)
+app.register_blueprint(my_schedule_add_blueprint)
+app.register_blueprint(my_schedule_delete_blueprint)
+app.register_blueprint(my_schedule_update_blueprint)
+app.register_blueprint(my_schedule_get_trainings_blueprint)
 
 
 

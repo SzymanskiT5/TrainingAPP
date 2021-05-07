@@ -2,13 +2,12 @@ import os
 import smtplib
 import sys
 from email.message import EmailMessage
-
 from flask import url_for
-
 from app.models import Users
 
 
 class MailHandler:
+    "This class handles e-mail sending"
     """Using environment variables to make our dates safe"""
 
     def __init__(self):
@@ -36,7 +35,7 @@ class MailHandler:
             smtp.login(self.email, self.password)
             smtp.send_message(msg)
 
-    def create_reset_email(self, user: Users):
+    def create_reset_email(self, user: Users) -> None:
         token = user.get_reset_token()
         msg = EmailMessage()
         msg['Subject'] = "Reset your password"

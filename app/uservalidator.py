@@ -24,7 +24,7 @@ class UserValidator:
         return found_id._id
 
     @staticmethod
-    def get_id_by_email(email):
+    def get_id_by_email(email) ->int:
         found_id = db.session.query(Users).filter(Users.email == email).first()
         db.session.commit()
         return found_id._id
@@ -138,7 +138,7 @@ class UserValidator:
 
     @staticmethod
     def create_activation_code() -> str:
-        activation_code = ''.join(random.choice(string.printable) for i in range(8))
+        activation_code = ''.join(random.choice(string.printable[:-10]) for i in range(8))
         return activation_code
 
     @staticmethod
@@ -160,13 +160,13 @@ class UserValidator:
         db.session.commit()
 
     @staticmethod
-    def check_if_activated(email):
+    def check_if_activated(email) ->bool:
         is_activated = db.session.query(Users).filter(Users.email == email).first()
         db.session.commit()
         return is_activated
 
     @staticmethod
-    def check_entered_password_with_base(email, entered_password):
+    def check_entered_password_with_base(email, entered_password) -> bool:
         password = UserValidator.get_password_from_email(email)
         return bool(check_password_hash(password, entered_password))
 
@@ -229,7 +229,7 @@ class UserValidator:
             return "You need to prove captcha", "warning"
 
     @staticmethod
-    def handle_password_recovery(email):
+    def handle_password_recovery(email) -> Tuple:
         try:
             UserValidator.check_if_email_exits(email)
             return "There is no such email", "warning"
@@ -247,13 +247,13 @@ class UserValidator:
             raise PasswordsAreNotTheSame
 
     @staticmethod
-    def change_password_in_base(email, new_password):
+    def change_password_in_base(email, new_password) -> None:
         password = db.session.query(Users).filter(Users.email == email).first()
         password.password_hash = generate_password_hash(new_password)
         db.session.commit()
 
     @staticmethod
-    def handle_change_password(entered_password, new_password, new_password_confirm):
+    def handle_change_password(entered_password, new_password, new_password_confirm) -> Tuple:
         email = session['email']
         try:
             UserValidator.compare_entered_passport_with_password_from_base(email, entered_password)
@@ -274,7 +274,7 @@ class UserValidator:
             return "New password format not correct, use strong password format", "warning"
 
     @staticmethod
-    def handle_password_recovery_after_token(password, confirm_password):
+    def handle_password_recovery_after_token(password, confirm_password) -> Tuple:
         try:
             UserValidator.check_password_format(password)
             UserValidator.check_password_format(confirm_password)
@@ -346,3 +346,4 @@ class UserValidator:
 
         except PasswordsAreNotTheSame:
             return "Passwords are not the same", "warning"
+
