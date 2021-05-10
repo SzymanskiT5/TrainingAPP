@@ -7,7 +7,7 @@ from flask import session
 from werkzeug.security import generate_password_hash, check_password_hash
 from app.constans import EMAIL_PATTERN, PASSWORD_PATTERN
 from app.exceptions import *
-from app.models import Users
+from app.models import Users, Training
 from app import db, recaptcha
 import re
 from app.mailhandler import MailHandler
@@ -332,13 +332,24 @@ class UserValidator:
         except RecaptchaIsMissing:
             return "You need to prove captcha", "warning"
 
+
+
+
+    @staticmethod
+    def delete_trainings(user_id):
+        Training.query.filter(Training.user_id == user_id).delete()
+        db.session.commit()
+
     @staticmethod
     def handle_account_delete(password: str, password_confirm: str) -> Tuple:
         email = session['email']
+        user_id = UserValidator.get_id_by_email(email)
         try:
             UserValidator.compare_entered_passport_with_password_from_base(email, password)
             UserValidator.compare_password_with_password_confirm(password, password_confirm)
             UserValidator.delete_user(email)
+            UserValidator.delete_trainings(user_id)
+
             return "Your account deleted successfully", "success"
 
         except EnteredPasswordIncorrect:

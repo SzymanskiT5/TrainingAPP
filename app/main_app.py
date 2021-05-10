@@ -91,16 +91,18 @@ def get_user_trainings_from_base() -> bool:
     trainings_found = trainings_found.all()
     return trainings_found
 
-@my_schedule_blueprint.route('/myschedule', methods=["GET"])
+@my_schedule_blueprint.route('/myschedule', methods=["GET","POST","PUT", "DELETE"])
 def my_schedule() -> Union[Response, str]:
-    get_trainings()
-    return render_template("eventcalendar_create-read-update-delete-CRUD.html")
+    if "nick" in session:
+        get_trainings()
+        return render_template("eventcalendar_create-read-update-delete-CRUD.html")
 
 @my_schedule_get_trainings_blueprint.route("/myschedule/get_trainings", methods = ["GET"])
 def get_trainings():
     if "nick" in session:
         trainings = get_user_trainings_from_base()
         json_trainings = jsonify(TrainingSchema().dump(trainings, many=True))
+
         return json_trainings
 
 
@@ -116,18 +118,17 @@ def my_schedule_add_to_db():
         training = Training.create_from_json(req)
         add_training(training)
         flash("Added!", "success")
+
         return redirect(url_for("myschedule.my_schedule"))
 
 
     return redirect(url_for("main.main"))
 
 
-
 def get_training_id(user_id, start) -> int:
     training = db.session.query(Training).filter(Training.user_id == user_id)\
                                             .filter(Training.start == start).first()
     training_id = training.id
-    db.session.commit()
     return  training_id
 
 
@@ -141,10 +142,7 @@ def my_schedule_delete_from_db():
         user_id = UserValidator.get_id_by_email(session["email"])
         req = request.json
         start = req["start"]
-        start = Training.reformate_date(start)
-        print(start, file=sys.stderr)
         training_id = get_training_id(user_id, start)
-
         delete_training(training_id)
         flash("Training deleted", "success")
         return redirect(url_for("myschedule.my_schedule"))
@@ -167,12 +165,8 @@ def update_training(json_body:dict, training_id )-> None:
 def my_schedule_update_training():
     if "nick" in session:
         user_id = UserValidator.get_id_by_email(session["email"])
-        print(user_id, file=sys.stderr)
         req = request.json
         start = req["start"]
-        start = Training.reformate_date(start)
-        print(start, file=sys.stderr)
-
         training_id = get_training_id(user_id, start)
         update_training(req, training_id)
 

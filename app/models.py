@@ -56,7 +56,7 @@ class Users(db.Model, UserMixin):
 class Training(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(length=50), nullable=False)
-    start = db.Column(db.DateTime, nullable=False)
+    start = db.Column(db.Date, nullable=False)
     duration = db.Column(db.Integer, nullable=False)
     description = db.Column(db.String(length=5000), nullable=True)
     rate = db.Column(db.Integer, nullable=False)
@@ -109,7 +109,7 @@ class Training(db.Model):
 class TrainingSchema(ma.Schema):
     id = fields.fields.Integer()
     title = fields.fields.Str()
-    start = fields.fields.DateTime(format='%Y-%m-%d')
+    start = fields.fields.Date(format='%Y-%m-%d')
     duration = fields.fields.Integer()
     description = fields.fields.Str()
     rate = fields.fields.Integer()
