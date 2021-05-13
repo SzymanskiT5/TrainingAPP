@@ -41,10 +41,7 @@ Creating global database, open python console and type:
   ```
   
 Start application:
-  ```sh
-  from app import db, app
-  db.create_all(app=app)
-  ```
+  
   
   Unix Bash (Linux, Mac):
   ```sh
