@@ -52,27 +52,13 @@
 
                 </div>
                 <div class="mbsc-form-group">
-                    {#                <label for="event-all-day">#}
-                    {#                    All-day#}
-                    {#                    <input mbsc-switch id="event-all-day" type="checkbox"/>#}
-                    {#                </label>#}
                     <label for="start-input">
                         Starts
                         <input mbsc-input id="start-input"/>
                     </label>
-                    {#                <label for="end-input">#}
-                    {#                    Ends#}
-                    {#                    <input mbsc-input id="end-input"/>#}
-                    {#                </label>#}
+
                     <div id="event-date"></div>
-                    {#                <label>#}
-                    {#                    Show as busy#}
-                    {#                    <input id="event-status-busy" mbsc-segmented type="radio" name="event-status" value="busy">#}
-                    {#                </label>#}
-                    {#                <label>#}
-                    {#                    Show as free#}
-                    {#                    <input id="event-status-free" mbsc-segmented type="radio" name="event-status" value="free">#}
-                    {#                </label>#}
+
                     <div class="mbsc-button-group">
                         <button class="mbsc-button-block" id="event-delete" mbsc-button data-color="danger"
                                 data-variant="outline">Delete event
@@ -105,22 +91,22 @@
             titleInput = document.getElementById('event-title'),
             descriptionTextarea = document.getElementById('event-desc'),
             durationTextarea = document.getElementById('event-duration'),
-            {#noteTextarea = document.getElementById("event-note")#}
+
             rateTextarea = document.getElementById("event-rate")
-        {#allDaySwitch = document.getElementById('event-all-day'),#}
-        {#freeSegmented = document.getElementById('event-status-free'),#}
-        {#busySegmented = document.getElementById('event-status-busy'),#}
+
         deleteButton = document.getElementById('event-delete'),
 
             datePickerResponsive = {
                 medium: {
                     controls: ['calendar'],
+
                     touchUi: false
                 }
             },
             datetimePickerResponsive = {
                 medium: {
                     controls: ['calendar'], // problems with time
+
                     touchUi: false
                 }
             },
@@ -150,9 +136,8 @@
                             description: tempEvent.description,
                             duration: tempEvent.duration,
                             rate: tempEvent.rate,
-                            {#allDay: tempEvent.allDay,#}
+
                             start: tempEvent.start,
-                            {#end: tempEvent.end,#}
                             color: tempEvent.color,
                         });
 
@@ -169,12 +154,9 @@
 
             // fill popup with a new event data
             mobiscroll.getInst(titleInput).value = tempEvent.title;
-            mobiscroll.getInst(descriptionTextarea).value = '';
-            mobiscroll.getInst(durationTextarea).value = '';
-            mobiscroll.getInst(rateTextarea).value = '';
-            {#mobiscroll.getInst(allDaySwitch).checked = true;#}
-            {#range.setVal([tempEvent.start, tempEvent.end]);#}
-            {#mobiscroll.getInst(busySegmented).checked = true;#}
+            mobiscroll.getInst(descriptionTextarea).value = 'Text';
+            mobiscroll.getInst(durationTextarea).value = '60';
+            mobiscroll.getInst(rateTextarea).value = '5';
             range.setOptions({controls: ['date'], responsive: datePickerResponsive});
 
             // set anchor for the popup
@@ -197,7 +179,7 @@
             if (!obj.duration) {
                 obj.duration = 60;
             }
-             if (!obj.rate) {
+            if (!obj.rate) {
                 obj.rate = 5;
             }
             if (!obj.description) {
@@ -205,7 +187,6 @@
             }
 
             var string = JSON.stringify(obj);
-            console.log(string);
             fetch(`${window.origin}/myschedule/add`, {
                 method: "POST",
                 credentials: "include",
@@ -223,10 +204,12 @@
 
             var obj = new Object()
             obj.title = tempEvent.title;
-            obj.start = tempEvent.start;
+            try {
+                obj.start = tempEvent.start.toLocaleDateString();
+            } catch (e) {
+                obj.start = tempEvent.start;
+            }
             var string = JSON.stringify(obj);
-            console.log("DELETE")
-            console.log(string)
             fetch(`${window.origin}/myschedule/delete`, {
                 method: "DELETE",
                 credentials: "include",
@@ -247,10 +230,26 @@
             obj.duration = tempEvent.duration;
             obj.rate = tempEvent.rate;
             obj.description = tempEvent.description;
-            obj.start = tempEvent.start;
+            try {
+                obj.start = tempEvent.start.toLocaleDateString();
+            } catch (e) {
+                obj.start = tempEvent.start;
+            }
+            if (!obj.title) {
+                obj.title = "Tittle";
+            }
+            if (!obj.duration) {
+                obj.duration = 60;
+            }
+            if (!obj.rate) {
+                obj.rate = 5;
+            }
+            if (!obj.description) {
+                obj.description = "Description";
+            }
 
             var string = JSON.stringify(obj);
-            console.log(string)
+
             fetch(`${window.origin}/myschedule/update`, {
                 method: "PUT",
                 credentials: "include",
@@ -268,6 +267,7 @@
         function createEditPopup(args) {
             var ev = args.event;
 
+
             // show delete button inside edit popup
             deleteButton.style.display = 'block';
 
@@ -283,16 +283,14 @@
                     handler: function () {
                         var date = range.getVal();
                         // update event with the new properties on save button click
+
                         calendar.updateEvent({
                             id: ev.id,
                             title: titleInput.value,
                             description: descriptionTextarea.value,
                             duration: durationTextarea.value,
                             rate: rateTextarea.value,
-                            {#allDay: mobiscroll.getInst(allDaySwitch).checked,#}
                             start: date[0],
-                            {#end: date[1],#}
-                            {#free: mobiscroll.getInst(freeSegmented).checked,#}
                             color: ev.color,
                         });
 
@@ -308,22 +306,14 @@
 
             // fill popup with the selected event data
             mobiscroll.getInst(titleInput).value = ev.title || '';
-            mobiscroll.getInst(descriptionTextarea).value = ev.description || "";
-            mobiscroll.getInst(durationTextarea).value = ev.duration || '';
-            {#mobiscroll.getInst(noteTextarea).value = ev.note || '';#}
-            mobiscroll.getInst(rateTextarea).value = ev.rate || '';
-            {#mobiscroll.getInst(allDaySwitch).checked = ev.allDay || false;#}
+            mobiscroll.getInst(descriptionTextarea).value = ev.description || "Description";
+            mobiscroll.getInst(durationTextarea).value = ev.duration || '60';
+            mobiscroll.getInst(rateTextarea).value = ev.rate || '5';
             range.setVal([ev.start, ev.end]);
 
-            {#if (ev.free) {#}
-            {#    mobiscroll.getInst(freeSegmented).checked = true;} #}
-            {#else #}
-            {#    {#}
-            {#    mobiscroll.getInst(busySegmented).checked = true;}#}
 
             // change range settings based on the allDay
             range.setOptions({
-                controls: ev.allDay ? ['date'] : ['datetime'],
                 responsive: ev.allDay ? datePickerResponsive : datetimePickerResponsive
             });
 
@@ -333,40 +323,42 @@
         }
 
         var calendar = mobiscroll.eventcalendar('#demo-add-delete-event', {
-            clickToCreate: 'double',           // More info about clickToCreate: https://docs.mobiscroll.com/5-3-0/javascript/eventcalendar#opt-clickToCreate
-            dragToCreate: true,                // More info about dragToCreate: https://docs.mobiscroll.com/5-3-0/javascript/eventcalendar#opt-dragToCreate
-            dragToMove: true,                  // More info about dragToMove: https://docs.mobiscroll.com/5-3-0/javascript/eventcalendar#opt-dragToMove
-            dragToResize: true,                // More info about dragToResize: https://docs.mobiscroll.com/5-3-0/javascript/eventcalendar#opt-dragToResize
-            view: {                            // More info about view: https://docs.mobiscroll.com/5-3-0/javascript/eventcalendar#opt-view
-                calendar: {labels: true}
-            },
-            data: myData,                      // More info about data: https://docs.mobiscroll.com/5-3-0/javascript/eventcalendar#opt-data
-            onEventClick: function (args) {    // More info about onEventClick: https://docs.mobiscroll.com/5-3-0/javascript/eventcalendar#event-onEventClick
-                oldEvent = {...args.event};
-                tempEvent = args.event;
+                clickToCreate: 'double',           // More info about clickToCreate: https://docs.mobiscroll.com/5-3-0/javascript/eventcalendar#opt-clickToCreate
+                dragToCreate: true,                // More info about dragToCreate: https://docs.mobiscroll.com/5-3-0/javascript/eventcalendar#opt-dragToCreate
+                dragToMove: true,                  // More info about dragToMove: https://docs.mobiscroll.com/5-3-0/javascript/eventcalendar#opt-dragToMove
+                dragToResize: true,                // More info about dragToResize: https://docs.mobiscroll.com/5-3-0/javascript/eventcalendar#opt-dragToResize
+                view: {                            // More info about view: https://docs.mobiscroll.com/5-3-0/javascript/eventcalendar#opt-view
+                    calendar: {labels: true}
+                },
+                data: myData,                      // More info about data: https://docs.mobiscroll.com/5-3-0/javascript/eventcalendar#opt-data
+                onEventClick: function (args) {    // More info about onEventClick: https://docs.mobiscroll.com/5-3-0/javascript/eventcalendar#event-onEventClick
+                    oldEvent = {...args.event};
+                    tempEvent = args.event;
 
-                if (!popup.isVisible()) {
-                    createEditPopup(args);
-                }
-            },
-            onEventCreated: function (args) {  // More info about onEventCreated: https://docs.mobiscroll.com/5-3-0/javascript/eventcalendar#event-onEventCreated
-                popup.close();
-                // store temporary event
-                tempEvent = args.event;
-                createAddPopup(args.target);
-            },
-            onEventDeleted: function () {      // More info about onEventDeleted: https://docs.mobiscroll.com/5-3-0/javascript/eventcalendar#event-onEventDeleted
-                mobiscroll.snackbar({
-                    button: {
-                        action: function () {
-                            calendar.addEvent(args.event);
+                    if (!popup.isVisible()) {
+                        createEditPopup(args);
+                    }
+                },
+                onEventCreated: function (args) {  // More info about onEventCreated: https://docs.mobiscroll.com/5-3-0/javascript/eventcalendar#event-onEventCreated
+                    popup.close();
+                    // store temporary event
+                    tempEvent = args.event;
+                    createAddPopup(args.target);
+                },
+                onEventDeleted: function () {      // More info about onEventDeleted: https://docs.mobiscroll.com/5-3-0/javascript/eventcalendar#event-onEventDeleted
+                    mobiscroll.snackbar({
+                        button: {
+                            action: function () {
+                                calendar.addEvent(args.event);
+                            },
+                            text: 'Undo'
                         },
-                        text: 'Undo'
-                    },
-                    message: 'Event deleted'
-                });
+                        message: 'Event deleted'
+                    });
+                }
             }
-        });
+            )
+        ;
 
         var popup = mobiscroll.popup('#demo-add-popup', {
             display: 'bottom',                 // Specify display mode like: display: 'bottom' or omit setting to use default
@@ -403,75 +395,61 @@
         durationTextarea.addEventListener('change', function (ev) {
             tempEvent.duration = ev.target.value;
         });
-        {#   noteTextarea.addEventListener('change', function (ev) {#}
-        {#    tempEvent.note = ev.target.value;#}
+
 
         rateTextarea.addEventListener('change', function (ev) {
             tempEvent.rate = ev.target.value;
         });
 
 
-        {#allDaySwitch.addEventListener('change', function () {#}
-        {#    var checked = this.checked#}
-        {#    // change range settings based on the allDay#}
-        {#    range.setOptions({#}
-        {#        controls: checked ? ['date'] : ['datetime'],#}
-        {#        responsive: checked ? datePickerResponsive : datetimePickerResponsive#}
-        {#    });#}
-        {##}
-        {#    // update current event's allDay property#}
-        {#    tempEvent.allDay = checked;#}
-        {#}#}
-            {#)#}
-            {#;#}
+        var range = mobiscroll.datepicker('#event-date', {
+            controls: ['date'],
+            select: 'range',
+            startInput: '#start-input',
+            endInput: '#end-input',
+            showRangeLabels: false,
+            touchUi: true,
+            responsive: datePickerResponsive,  // More info about responsive: https://docs.mobiscroll.com/5-3-0/javascript/eventcalendar#opt-responsive
+            onChange: function (args) {
+                var date = args.value;
+                date[0] = date[0].toLocaleDateString();
+                // update event's start date
+                tempEvent.start = date[0];
 
-            var range = mobiscroll.datepicker('#event-date', {
-                controls: ['date'],
-                select: 'range',
-                startInput: '#start-input',
-                endInput: '#end-input',
-                showRangeLabels: false,
-                touchUi: true,
-                responsive: datePickerResponsive,  // More info about responsive: https://docs.mobiscroll.com/5-3-0/javascript/eventcalendar#opt-responsive
-                onChange: function (args) {
-                    var date = args.value;
-                    // update event's start date
-                    tempEvent.start = date[0];
-                    {#tempEvent.end = date[1];#}
-                }
+            }
+        });
+
+        document.querySelectorAll('input[name=event-status]').forEach(function (elm) {
+            elm.addEventListener('change', function () {
+                // update current event's free property
+                send_update_request();
+
             });
+        });
 
-            document.querySelectorAll('input[name=event-status]').forEach(function (elm) {
-                elm.addEventListener('change', function () {
-                    // update current event's free property
-                    send_update_request();
-                    {#tempEvent.free = mobiscroll.getInst(freeSegmented).checked;#}
-                });
-            });
+        deleteButton.addEventListener('click', function () {
+            // delete current event on button click
+            send_delete_request();
+            calendar.removeEvent(oldEvent);
+            popup.close();
 
-            deleteButton.addEventListener('click', function () {
-                // delete current event on button click
-                send_delete_request();
-                calendar.removeEvent(oldEvent);
-                popup.close();
+            // save a local reference to the deleted event
+            var deletedEvent = tempEvent;
 
-                // save a local reference to the deleted event
-                var deletedEvent = tempEvent;
+            mobiscroll.snackbar({
+                button: {
+                    action: function () {
 
-                mobiscroll.snackbar({
-                    button: {
-                        action: function () {
-
-                            calendar.addEvent(deletedEvent);
+                        calendar.addEvent(deletedEvent);
 
 
-                        },
-                        text: 'Undo'
                     },
-                    message: 'Event deleted',
+                    text: 'Undo'
+                },
+                message: 'Event deleted',
 
-                });
             });
+        });
 
     </script>
 

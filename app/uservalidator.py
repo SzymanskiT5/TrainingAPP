@@ -1,8 +1,6 @@
 import random
 import string
-import sys
-from datetime import datetime, timedelta, date
-from flask_recaptcha import ReCaptcha
+from datetime import datetime, timedelta
 from flask import session
 from werkzeug.security import generate_password_hash, check_password_hash
 from app.constans import EMAIL_PATTERN, PASSWORD_PATTERN
@@ -15,20 +13,13 @@ from typing import Tuple
 
 
 class UserValidator:
-    '''Controlling class'''
+    '''Controlling User operations class'''
 
     @staticmethod
-    def get_id_by_nick(nick: str) -> int:
-        found_id = db.session.query(Users).filter(Users.name == nick).first()
-        db.session.commit()
-        return found_id._id
-
-    @staticmethod
-    def get_id_by_email(email) ->int:
+    def get_id_by_email(email) -> int:
         found_id = db.session.query(Users).filter(Users.email == email).first()
         db.session.commit()
         return found_id._id
-
 
     @staticmethod
     def check_email_format(email: str):
@@ -100,23 +91,11 @@ class UserValidator:
             raise CodeExpired
 
     @staticmethod
-    def check_hashed_password(entered_password: str, password: str, nick: str, email: str) -> Tuple:
-        if check_password_hash(entered_password, password):
-            return "Successfully logged in", "success", nick, email
-        return "Wrong nickname/email or password", "error", None, None
-
-    @staticmethod
     def check_if_user_activated_from_email(email: str):
         found_activated = db.session.query(Users).filter(Users.email == email).first()
         db.session.commit()
         if found_activated.is_activated:
             raise AccountIsActivated
-
-    @staticmethod
-    def check_if_user_activated_from_nick(nick: str) -> int:
-        activation = db.session.query(Users).filter(Users.name == nick).first()
-        db.session.commit()
-        return activation.is_activated
 
     @staticmethod
     def create_user(nick: str, email: str, secured_password: str, activation_code: str, expire_date: datetime) -> None:
@@ -160,7 +139,7 @@ class UserValidator:
         db.session.commit()
 
     @staticmethod
-    def check_if_activated(email) ->bool:
+    def check_if_activated(email) -> bool:
         is_activated = db.session.query(Users).filter(Users.email == email).first()
         db.session.commit()
         return is_activated
@@ -231,10 +210,14 @@ class UserValidator:
     @staticmethod
     def handle_password_recovery(email) -> Tuple:
         try:
+            UserValidator.check_recaptcha()
             UserValidator.check_if_email_exits(email)
             return "There is no such email", "warning"
         except EmailExists:
             return "Check your mailbox and follow the instructions", "success"
+
+        except RecaptchaIsMissing:
+            return "You need to prove captcha", "warning"
 
     @staticmethod
     def compare_entered_passport_with_password_from_base(email: str, entered_password: str):
@@ -292,7 +275,7 @@ class UserValidator:
             raise RecaptchaIsMissing
 
     @staticmethod
-    def check_signup_email(email: str, nick: str, password: str, confirm_password: str) -> Tuple:
+    def check_signup(email: str, nick: str, password: str, confirm_password: str) -> Tuple:
         try:
             UserValidator.check_recaptcha()
             UserValidator.check_email_format(email)
@@ -308,7 +291,7 @@ class UserValidator:
             UserValidator.create_user(nick, email, secured_password, activation_code, expire_date)
             mail = MailHandler()
             mail.create_activation_email(email, activation_code)
-            return "Now you can activate your account", "success"
+            return "Now you can activate your account, please check your mailbox", "success"
 
 
         except WrongEmailFormat:
@@ -332,9 +315,6 @@ class UserValidator:
         except RecaptchaIsMissing:
             return "You need to prove captcha", "warning"
 
-
-
-
     @staticmethod
     def delete_trainings(user_id):
         Training.query.filter(Training.user_id == user_id).delete()
@@ -357,4 +337,3 @@ class UserValidator:
 
         except PasswordsAreNotTheSame:
             return "Passwords are not the same", "warning"
-

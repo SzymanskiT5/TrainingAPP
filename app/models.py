@@ -3,11 +3,10 @@ from __future__ import annotations
 import sys
 from datetime import datetime, date
 from flask import session
-from app import db, login_manager, app, ma, fields
+from app import db, login_manager, app, ma
+from flask_marshmallow import fields
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from flask_login import UserMixin
-
-
 
 
 @login_manager.user_loader
@@ -34,13 +33,10 @@ class Users(db.Model, UserMixin):
         self.is_activated = is_activated
         self.expire_date = expire_date
 
-
-
     def get_reset_token(self, expire_sec=1800):
         s = Serializer(app.config['SECRET_KEY'], expire_sec)
         return s.dumps({"user_id": self._id}).decode("utf-8")
 
-    
     @staticmethod
     def verify_reset_token(token):
         s = Serializer(app.config['SECRET_KEY'])
@@ -49,8 +45,6 @@ class Users(db.Model, UserMixin):
         except:
             return None
         return Users.query.get(user_id)
-
-
 
 
 class Training(db.Model):
@@ -82,28 +76,24 @@ class Training(db.Model):
     @staticmethod
     def create_from_json(json_body: dict) -> Training:
         email = session['email']
-        user_id= db.session.query(Users).filter(Users.email == email).first()
+        user_id = db.session.query(Users).filter(Users.email == email).first()
         db.session.commit()
         user_id = user_id._id
         start = json_body["start"]
         start = Training.reformate_date(start)
+
         return Training(title=json_body["title"], start=date.fromisoformat(start), duration=json_body["duration"],
-                        description=json_body["description"], rate=json_body["rate"], user_id = user_id)
+                        description=json_body["description"], rate=json_body["rate"], user_id=user_id)
 
     @staticmethod
     def reformate_date(start):
         start = start.split(".")
         start.reverse()
-        print(start[2], file=sys.stderr)
         if len(start[2]) != 2:
             day = ["0", start[2]]
             start[2] = "".join(day)
         start = "-".join(start)
-
-        print(start, file=sys.stderr)
         return start
-
-
 
 
 class TrainingSchema(ma.Schema):
@@ -113,5 +103,3 @@ class TrainingSchema(ma.Schema):
     duration = fields.fields.Integer()
     description = fields.fields.Str()
     rate = fields.fields.Integer()
-
-

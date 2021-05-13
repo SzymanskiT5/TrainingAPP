@@ -1,18 +1,18 @@
-import os
 import smtplib
-import sys
 from email.message import EmailMessage
+from .constans import EMAIL_PASS, EMAIL_USER
 from flask import url_for
 from app.models import Users
 
 
 class MailHandler:
-    "This class handles e-mail sending"
+    """This class handles e-mail sending"""
     """Using environment variables to make our dates safe"""
+    """Check another smtp if you have another email than gmail"""
 
     def __init__(self):
-        self.email = os.getenv("EMAIL_USER")
-        self.password = os.getenv("EMAIL_PASS")
+        self.email = EMAIL_USER
+        self.password = EMAIL_PASS
 
     def create_activation_email(self, email: str, activation_code: str) -> None:
         msg = EmailMessage()
@@ -41,7 +41,6 @@ class MailHandler:
         msg['Subject'] = "Reset your password"
         msg["From"] = self.email
         msg["To"] = user.email
-        print(user.email, file=sys.stderr)
         msg.set_content = ("Registration")
         msg.add_alternative(f"""\
                 <!DOCTYPE html>
