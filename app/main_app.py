@@ -1,4 +1,3 @@
-
 from flask import render_template, redirect, url_for, Blueprint, request, session, flash, Response, jsonify
 from . import db
 from .mailhandler import MailHandler
@@ -6,7 +5,6 @@ from .uservalidator import UserValidator
 from typing import Union
 from .models import Training, Users, TrainingSchema
 from app.trainingsHandler import TrainingHandler
-
 
 main_blueprint = Blueprint('main', __name__)
 login_blueprint = Blueprint('login', __name__)
@@ -25,9 +23,6 @@ my_schedule_update_blueprint = Blueprint("my_schedule_update", __name__)
 my_schedule_get_trainings_blueprint = Blueprint("my_schedule_get_trainings", __name__)
 
 
-
-
-
 def check_if_logged_in(template_name: str) -> Union[Response, str]:
     if "nick" in session:
         flash('You are already logged in', 'success')
@@ -41,9 +36,6 @@ def check_if_logged_in_account_options(template: str) -> Union[Response, str]:
         return render_template(template)
     flash("You need to log in to check account options", 'warning')
     return redirect(url_for("login.login"))
-
-
-
 
 
 def handle_login(email_or_nick: str, password: str) -> Union[Response, str]:
@@ -74,8 +66,6 @@ def login() -> Union[Response, str]:
         return check_if_logged_in("login.html")
 
 
-
-
 @my_schedule_blueprint.route('/myschedule', methods=["GET"])
 def my_schedule() -> Union[Response, str]:
     if "nick" in session:
@@ -84,7 +74,7 @@ def my_schedule() -> Union[Response, str]:
 
 
 @my_schedule_get_trainings_blueprint.route("/myschedule/get_trainings", methods=["GET"])
-def get_trainings():
+def get_trainings() -> jsonify:
     if "nick" in session:
         trainings = TrainingHandler.get_user_trainings_from_base()
         json_trainings = jsonify(TrainingSchema().dump(trainings, many=True))
@@ -92,10 +82,8 @@ def get_trainings():
         return json_trainings
 
 
-
-
 @my_schedule_add_blueprint.route('/myschedule/add', methods=["POST"])
-def my_schedule_add_to_db():
+def my_schedule_add_to_db() -> Response:
     if "nick" in session:
         req = request.json
         training = Training.create_from_json(req)
@@ -107,7 +95,7 @@ def my_schedule_add_to_db():
 
 
 @my_schedule_delete_blueprint.route("/myschedule/delete", methods=["DELETE"])
-def my_schedule_delete_from_db():
+def my_schedule_delete_from_db() -> Response:
     if "nick" in session:
         user_id = UserValidator.get_id_by_email(session["email"])
         req = request.json
@@ -120,8 +108,9 @@ def my_schedule_delete_from_db():
 
     return redirect(url_for("main.main"))
 
+
 @my_schedule_update_blueprint.route("/myschedule/update", methods=["PUT"])
-def my_schedule_update_training():
+def my_schedule_update_training() -> Response:
     if "nick" in session:
         user_id = UserValidator.get_id_by_email(session["email"])
         req = request.json
@@ -189,13 +178,13 @@ def activation() -> Union[Response, str]:
 
 
 @my_account_blueprint.route("/myaccount", methods=["GET"])
-def myaccount():
+def myaccount() -> Union[Response, str]:
     if request.method == "GET":
         return check_if_logged_in_account_options("accountoptions.html")
 
 
 @my_account_blueprint.route("/myaccount/changepassword", methods=["POST", "GET"])
-def change_password():
+def change_password() -> Union[Response, str]:
     if request.method == "POST":
         current_password = request.form["current_password"]
         new_password = request.form["new_password"]
@@ -215,7 +204,7 @@ def change_password():
 
 
 @my_account_blueprint.route("/myaccount/deleteaccount", methods=["POST", "GET"])
-def delete_account():
+def delete_account() -> Union[Response, str]:
     if request.method == "POST":
         password = request.form["password"]
         confirm_password = request.form["password_confirm"]
@@ -233,7 +222,7 @@ def delete_account():
 
 
 @password_recovery_blueprint.route("/passwordrecovery", methods=["POST", "GET"])
-def password_recovery():
+def password_recovery() -> Union[Response, str]:
     if request.method == "POST":
         email = request.form["email"]
         flashpop, message = UserValidator.handle_password_recovery(email)
@@ -251,7 +240,7 @@ def password_recovery():
 
 
 @reset_token_blueprint.route("/reset_password/<token>", methods=["GET", "POST"])
-def reset_token(token):
+def reset_token(token) -> Union[Response, str]:
     if request.method == "POST":
         user = Users.verify_reset_token(token)
         handle_token_status(user)
@@ -271,7 +260,7 @@ def reset_token(token):
         return check_if_logged_in("resettoken.html")
 
 
-def handle_token_status(user: Users):
+def handle_token_status(user: Users) -> Response:
     if not user:
         flash("Invalid or expired token", "warning")
         return redirect(url_for("password_recovery.password_recovery"))

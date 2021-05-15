@@ -24,6 +24,8 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///User_and_Workouts.db'
 app.config['SESSION_TYPE'] = 'sqlalchemy'
 db.init_app(app)
 app.debug = True
+
+
 from .main_app import main_blueprint, login_blueprint, my_schedule_blueprint, sign_up_blueprint, \
     activation_blueprint, my_account_blueprint, password_recovery_blueprint, reset_token_blueprint, \
     my_schedule_add_blueprint, my_schedule_delete_blueprint, my_schedule_update_blueprint, \

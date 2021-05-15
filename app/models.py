@@ -48,7 +48,7 @@ class Users(db.Model, UserMixin):
 
 
 class Training(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+    _id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(length=50), nullable=False)
     start = db.Column(db.Date, nullable=False)
     duration = db.Column(db.Integer, nullable=False)
@@ -86,7 +86,8 @@ class Training(db.Model):
                         description=json_body["description"], rate=json_body["rate"], user_id=user_id)
 
     @staticmethod
-    def reformate_date(start):
+    def reformate_date(start) -> str:
+        """from D.MM.YYYY to YYYY-MM-DD"""
         start = start.split(".")
         start.reverse()
         if len(start[2]) != 2:

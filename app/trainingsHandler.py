@@ -27,18 +27,18 @@ class TrainingHandler:
 
     @staticmethod
     def delete_training(training_id) -> None:
-        Training.query.filter(Training.id == training_id).delete()
+        Training.query.filter(Training._id == training_id).delete()
         db.session.commit()
 
     @staticmethod
     def get_training_id(user_id, start) -> int:
         training = db.session.query(Training).filter(Training.user_id == user_id) \
             .filter(Training.start == start).first()
-        training_id = training.id
+        training_id = training._id
         return training_id
 
     @staticmethod
-    def check_date_format(date_format) -> date:
+    def check_date_format(date_format) -> str:
         "JS sometimes sends another date format, SQLite has problem with queries, this function is to avoid this."
         if re.match(DATE_YYYY_MM_DD_PATTERN, date_format):
             return date_format
@@ -47,6 +47,6 @@ class TrainingHandler:
     @staticmethod
     def update_training(json_body: dict, training_id) -> None:
         training_new = Training.create_from_json(json_body)
-        training = db.session.query(Training).filter(Training.id == training_id).first()
+        training = db.session.query(Training).filter(Training._id == training_id).first()
         training.update(training_new)
         db.session.commit()
