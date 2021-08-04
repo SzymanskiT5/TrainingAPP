@@ -4,7 +4,7 @@ Workout Diary APP made on Flask
 
 <!-- ABOUT THE PROJECT -->
 ## About The Project
-Welcome! This is my first Flask project. It is a web application to scheduling yor workouts. I used modifided by me Mobiscroll Calendar with all CRUD functions. Enjoy!
+Welcome! This is my first Flask project. It is a web application to scheduling yor workouts. I used modifided by me Mobiscroll Calendar with all CRUD functions.  Enjoy!
 
 
 ### Functions
@@ -159,5 +159,5 @@ ENJOY!
 <!-- CONTACT -->
 ## Contact
 
-Sebastian Szymański - shadow.smoke7@gmail.com
+Sebastian Szymański - sebastian.szymanski.t5@gmail.com
 
